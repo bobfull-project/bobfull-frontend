@@ -5,10 +5,13 @@ import { AuthPage } from '@/features/auth/pages/AuthPage'
 import { HomePage } from '@/features/home/pages/HomePage'
 import { MyPage } from '@/features/mypage/pages/MyPage'
 import { MyReservationsPage } from '@/features/reservations/pages/MyReservationsPage'
+import { RecruitingReservationListPage } from '@/features/reservations/pages/RecruitingReservationListPage'
 import { ReservationFormPage } from '@/features/reservations/pages/ReservationFormPage'
 import { RestaurantDetailPage } from '@/features/restaurants/pages/RestaurantDetailPage'
 import { RestaurantListPage } from '@/features/restaurants/pages/RestaurantListPage'
-import { OwnerDashboardPage } from '@/features/owner/pages/OwnerDashboardPage'
+import { OwnerRestaurantFormPage } from '@/features/owner/pages/OwnerRestaurantFormPage'
+import { OwnerRestaurantListPage } from '@/features/owner/pages/OwnerRestaurantListPage'
+import { OwnerRestaurantManagePage } from '@/features/owner/pages/OwnerRestaurantManagePage'
 import { NotFoundPage } from '@/features/system/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
@@ -17,6 +20,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: 'restaurants', element: <RestaurantListPage /> },
+      { path: 'recruiting', element: <RecruitingReservationListPage /> },
       { path: 'restaurants/:restaurantId', element: <RestaurantDetailPage /> },
       { path: 'restaurants/:restaurantId/reservations/new', element: <ReservationFormPage /> },
       { path: 'reservations', element: <MyReservationsPage /> },
@@ -32,8 +36,9 @@ export const router = createBrowserRouter([
     element: <OwnerLayout />,
     children: [
       { index: true, element: <Navigate to="restaurants" replace /> },
-      { path: 'restaurants', element: <OwnerDashboardPage view="restaurants" /> },
-      { path: 'reservations', element: <OwnerDashboardPage view="reservations" /> },
+      { path: 'restaurants', element: <OwnerRestaurantListPage /> },
+      { path: 'restaurants/new', element: <OwnerRestaurantFormPage /> },
+      { path: 'restaurants/:restaurantId', element: <OwnerRestaurantManagePage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

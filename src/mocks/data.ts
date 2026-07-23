@@ -1,4 +1,4 @@
-import type { Reservation, Restaurant } from '@/types/domain'
+import type { Reservation, ReservationSlot, Restaurant } from '@/types/domain'
 
 export const restaurants: Restaurant[] = [
   { id: 1, name: '담소식탁', category: '한식', area: '성수동', description: '제철 재료로 차린 따뜻한 한 끼와 편안한 대화가 있는 식탁입니다.', rating: 4.8, priceRange: '₩₩', image: '🥘', tags: ['제철 한식', '조용한 분위기'] },
@@ -13,4 +13,16 @@ export const reservations: Reservation[] = [
   { id: 101, restaurantId: 1, restaurantName: '담소식탁', hostName: '민지', dateTime: '2026-07-23T19:00:00+09:00', capacity: 4, joined: 3, status: 'OPEN', note: '퇴근 후 편하게 저녁 먹어요.' },
   { id: 102, restaurantId: 4, restaurantName: '오후의 파스타', hostName: '준호', dateTime: '2026-07-25T18:30:00+09:00', capacity: 3, joined: 2, status: 'OPEN', note: '파스타 좋아하시는 분 환영해요.' },
   { id: 103, restaurantId: 3, restaurantName: '모락모락', hostName: '서연', dateTime: '2026-07-28T12:30:00+09:00', capacity: 5, joined: 5, status: 'CONFIRMED', note: '주말 딤섬 모임입니다.' },
+]
+
+export const reservationSlots: ReservationSlot[] = [
+  { id: 1001, restaurantId: 1, dateTime: '2026-07-24T18:00:00+09:00', tableCapacity: 6, remainingSeats: 4, status: 'AVAILABLE' },
+  { id: 1002, restaurantId: 1, dateTime: '2026-07-24T18:30:00+09:00', tableCapacity: 4, remainingSeats: 2, status: 'AVAILABLE' },
+  { id: 1003, restaurantId: 1, dateTime: '2026-07-24T19:00:00+09:00', tableCapacity: 4, remainingSeats: 0, status: 'SOLD_OUT' },
+  { id: 2001, restaurantId: 2, dateTime: '2026-07-24T17:30:00+09:00', tableCapacity: 4, remainingSeats: 3, status: 'AVAILABLE' },
+  { id: 2002, restaurantId: 2, dateTime: '2026-07-24T18:30:00+09:00', tableCapacity: 6, remainingSeats: 5, status: 'AVAILABLE' },
+  { id: 3001, restaurantId: 3, dateTime: '2026-07-24T18:00:00+09:00', tableCapacity: 6, remainingSeats: 1, status: 'AVAILABLE' },
+  { id: 4001, restaurantId: 4, dateTime: '2026-07-24T18:30:00+09:00', tableCapacity: 4, remainingSeats: 2, status: 'AVAILABLE' },
+  { id: 5001, restaurantId: 5, dateTime: '2026-07-24T11:30:00+09:00', tableCapacity: 6, remainingSeats: 4, status: 'AVAILABLE' },
+  { id: 6001, restaurantId: 6, dateTime: '2026-07-24T19:00:00+09:00', tableCapacity: 4, remainingSeats: 3, status: 'AVAILABLE' },
 ]

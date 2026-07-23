@@ -19,7 +19,7 @@ export function HomePage() {
             <p className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-sub-soft text-sub-active"><CalendarPlus size={16} /></span>함께라서 더 따뜻하게</p>
             <p className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-full bg-brand-soft text-brand"><MapPin size={16} /></span>맛있는 인연이 시작되는 곳</p>
           </div>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link to="/restaurants"><Button className="gap-2"><Search size={18} />모임 둘러보기</Button></Link><Link to="/restaurants/1/reservations/new"><Button variant="secondary" className="gap-2"><CalendarPlus size={18} />모임 만들기</Button></Link></div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link to="/recruiting"><Button className="gap-2"><Search size={18} />모임 둘러보기</Button></Link><Link to="/restaurants"><Button variant="secondary" className="gap-2"><MapPin size={18} />식당 찾기</Button></Link></div>
         </div>
       </div>
     </section>

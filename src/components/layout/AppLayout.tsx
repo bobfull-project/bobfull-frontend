@@ -4,7 +4,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 
-const nav = [{ to: '/', label: '홈' }, { to: '/restaurants', label: '식당 찾기' }, { to: '/reservations', label: '내 예약' }]
+const nav = [{ to: '/', label: '홈' }, { to: '/restaurants', label: '식당 찾기' }, { to: '/recruiting', label: '모집중' }, { to: '/reservations', label: '내 예약' }]
 
 export function AppLayout() {
   const [open, setOpen] = useState(false)

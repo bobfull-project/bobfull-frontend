@@ -24,3 +24,12 @@ export interface Reservation {
   status: ReservationStatus
   note: string
 }
+
+export interface ReservationSlot {
+  id: number
+  restaurantId: number
+  dateTime: string
+  tableCapacity: number
+  remainingSeats: number
+  status: 'AVAILABLE' | 'SOLD_OUT'
+}
