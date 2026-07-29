@@ -17,7 +17,7 @@ export function RecruitingReservationListPage() {
   const [sort, setSort] = useState<'popular' | 'latest'>('popular')
 
   const items = useMemo(() => reservationSlots
-    .filter((slot) => slot.status === 'AVAILABLE' && slot.remainingSeats > 0)
+    .filter((slot) => slot.status === 'RECRUITING' && slot.remainingSeats > 0)
     .map((slot) => ({ slot, restaurant: restaurants.find((restaurant) => restaurant.id === slot.restaurantId) }))
     .filter((item) => item.restaurant)
     .filter(({ slot, restaurant }) =>
@@ -55,8 +55,9 @@ export function RecruitingReservationListPage() {
           <div className="p-5">
             <div className="space-y-3 text-sm">
               <p className="flex items-center gap-2 font-semibold"><CalendarDays size={16} className="text-brand" />{new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(slot.dateTime))}</p>
-              <p className="flex items-center gap-2 text-muted"><Clock3 size={16} />{slot.dateTime.slice(11, 16)} 시간대</p>
+              <p className="flex items-center gap-2 text-muted"><Clock3 size={16} />{slot.startAt.slice(11, 16)}~{slot.endAt.slice(11, 16)} · {slot.tableName}</p>
               <p className="flex items-center gap-2 text-muted"><Users size={16} /><strong className="text-brand">잔여 좌석 {slot.remainingSeats}석</strong> ({slot.tableCapacity}인 테이블)</p>
+              <p className="text-xs text-muted">1인당 예약금 {restaurant.depositPerPerson.toLocaleString()}원</p>
             </div>
             <Link to={`/restaurants/${restaurant.id}/reservations/new?slotId=${slot.id}`}><Button fullWidth className="mt-5">이 시간 예약하기</Button></Link>
           </div>
