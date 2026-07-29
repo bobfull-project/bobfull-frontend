@@ -1,11 +1,15 @@
+import { useQuery } from '@tanstack/react-query'
 import { ChevronRight, MapPin, Plus, Store } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { useOwnerRestaurantStore } from '@/stores/ownerRestaurantStore'
+import { getMyRestaurants } from '@/features/owner/api/restaurantApi'
 
 export function OwnerRestaurantListPage() {
-  const restaurants = useOwnerRestaurantStore((state) => state.restaurants)
+  const { data: restaurants = [], isLoading, isError } = useQuery({
+    queryKey: ['owner', 'restaurants'],
+    queryFn: getMyRestaurants,
+  })
 
   return <div className="mx-auto max-w-6xl">
     <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -17,10 +21,12 @@ export function OwnerRestaurantListPage() {
       <Link to="/owner/restaurants/new"><Button className="gap-2"><Plus size={17} />식당 등록</Button></Link>
     </header>
 
-    {restaurants.length === 0
+    {isLoading && <p className="py-20 text-center text-sm text-muted">불러오는 중입니다.</p>}
+    {isError && <p className="py-20 text-center text-sm text-red-700">식당 목록을 불러오지 못했습니다.</p>}
+    {!isLoading && !isError && (restaurants.length === 0
       ? <EmptyState title="등록한 식당이 없습니다" description="먼저 식당을 등록한 후 예약 가능 시간을 설정해주세요." />
       : <div className="grid gap-4">
-        {restaurants.map((restaurant) => <Link key={restaurant.id} to={`/owner/restaurants/${restaurant.id}`} className="card flex items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-card">
+        {restaurants.map((restaurant) => <Link key={restaurant.restaurantId} to={`/owner/restaurants/${restaurant.restaurantId}`} className="card flex items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-card">
           <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand"><Store size={24} /></span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -28,10 +34,10 @@ export function OwnerRestaurantListPage() {
               <span className="rounded-full bg-sub-soft px-2.5 py-1 text-xs font-semibold text-brand">{restaurant.category}</span>
             </div>
             <p className="mt-2 flex items-center gap-1 truncate text-sm text-muted"><MapPin size={14} />{restaurant.address}</p>
-            <p className="mt-2 text-xs text-muted">등록된 예약 시간 {restaurant.slots.length}개</p>
+            <p className="mt-2 text-xs text-muted">1인당 예약금 {restaurant.depositPerPerson.toLocaleString()}원</p>
           </div>
           <ChevronRight className="ml-auto shrink-0 text-muted" size={20} />
         </Link>)}
-      </div>}
+      </div>)}
   </div>
 }
