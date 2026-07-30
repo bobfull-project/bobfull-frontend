@@ -16,6 +16,11 @@ type CompleteResult =
   | { status: 'success'; paymentId: string; paymentStatus: string }
   | { status: 'failed'; message: string }
 
+function mask(value: string | undefined) {
+  if (!value) return '(미설정)'
+  return `••••••${value.slice(-4)}`
+}
+
 /**
  * 개발자 전용 결제 테스트 페이지. Postman으로 백엔드 예약 준비 API를 호출해 받은
  * 실제 paymentId/amount를 그대로 입력해 PortOne 결제창을 열어 웹훅·완료 API 연동을 검증한다.
@@ -94,8 +99,8 @@ export function PaymentDevTestPage() {
     />
     <div className="card space-y-6 p-6 md:p-8">
       <div className="rounded-2xl bg-brand-soft p-5 text-sm text-muted">
-        <p>storeId: <span className="font-mono">{portoneConfig.storeId ?? '(미설정)'}</span></p>
-        <p className="mt-1">channelKey: <span className="font-mono">{portoneConfig.channelKey ?? '(미설정)'}</span></p>
+        <p>storeId: <span className="font-mono">{mask(portoneConfig.storeId)}</span></p>
+        <p className="mt-1">channelKey: <span className="font-mono">{mask(portoneConfig.channelKey)}</span></p>
         {portoneConfig.isDemo && <p className="mt-2 text-xs font-medium text-brand">PortOne 공식 테스트 채널 · 실제 청구되지 않습니다.</p>}
       </div>
 
