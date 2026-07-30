@@ -4,6 +4,7 @@ import { OwnerLayout } from '@/components/layout/OwnerLayout'
 import { AuthPage } from '@/features/auth/pages/AuthPage'
 import { HomePage } from '@/features/home/pages/HomePage'
 import { MyPage } from '@/features/mypage/pages/MyPage'
+import { PaymentDevTestPage } from '@/features/payments/pages/PaymentDevTestPage'
 import { MyReservationsPage } from '@/features/reservations/pages/MyReservationsPage'
 import { RecruitingReservationListPage } from '@/features/reservations/pages/RecruitingReservationListPage'
 import { ReservationFormPage } from '@/features/reservations/pages/ReservationFormPage'
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: 'restaurants/:restaurantId/reservations/new', element: <ReservationFormPage /> },
       { path: 'reservations', element: <MyReservationsPage /> },
       { path: 'mypage', element: <MyPage /> },
+      { path: 'dev/payment-test', element: <PaymentDevTestPage /> },
     ],
   },
   { path: '/login', element: <AuthPage mode="login" audience="member" /> },
