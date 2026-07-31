@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, UserRound } from 'lucide-react'
+import { CheckCircle2, Receipt, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -86,7 +86,10 @@ export function MyPage() {
       <div className="card flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
         <span className="grid size-16 shrink-0 place-items-center rounded-full bg-brand-soft text-brand"><UserRound size={28} /></span>
         <div className="min-w-0"><h2 className="text-lg font-semibold">{profile.name}</h2><p className="mt-1 truncate text-sm text-muted">{profile.email}</p><span className="mt-2 inline-block rounded-full bg-sub-soft px-3 py-1 text-xs font-semibold text-brand">{roleLabel[profile.role]}</span></div>
-        {!editing && <Button variant="secondary" className="sm:ml-auto" onClick={() => { setEditing(true); setSaved(false) }}>내 정보 수정</Button>}
+        {!editing && <div className="flex gap-2 sm:ml-auto">
+          <Link to="/mypage/payments"><Button variant="secondary" className="gap-2"><Receipt size={17} />결제·환불 내역</Button></Link>
+          <Button variant="secondary" onClick={() => { setEditing(true); setSaved(false) }}>내 정보 수정</Button>
+        </div>}
       </div>
 
       {saved && <p className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700"><CheckCircle2 size={17} />내 정보가 수정되었습니다.</p>}

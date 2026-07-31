@@ -1,36 +1,75 @@
 import { apiClient } from '@/lib/api/client'
 import { apiConfig } from '@/lib/api/config'
 import { reservations, reservationSlots, restaurants } from '@/mocks/data'
-import type { Reservation } from '@/types/domain'
+import type { RecruitmentStatus, Reservation, ReservationStatus } from '@/types/domain'
 
-export interface CreateReservationInput { timeSlotId: number; partySize: number }
-export interface ReservationRepository { getMine(): Promise<Reservation[]>; create(input: CreateReservationInput): Promise<Reservation>; join(id: number): Promise<Reservation> }
+export interface ReservationSearchParams {
+  keyword?: string
+  date?: string
+  time?: string
+  capacity?: number
+  minimumRemainingSeats?: number
+  page?: number
+  size?: number
+  sort?: string
+}
+
+// 백엔드 응답(6-3, ReservationSearchResponse)이 실제로 주는 필드다.
+export interface RecruitingReservationItem {
+  reservationId: number
+  restaurantId: number
+  restaurantName: string
+  sessionId: number
+  tableId: number
+  capacity: number
+  startAt: string
+  endAt: string
+  reservationStatus: ReservationStatus
+  recruitmentStatus: RecruitmentStatus
+  currentParticipantCount: number
+  availableCapacity: number
+  confirmationThreshold: number
+}
+
+export interface ReservationRepository {
+  getMine(): Promise<Reservation[]>
+  searchRecruiting(params?: ReservationSearchParams): Promise<RecruitingReservationItem[]>
+}
+
+function toRecruitingReservationItem(slot: (typeof reservationSlots)[number]): RecruitingReservationItem {
+  const restaurant = restaurants.find((item) => item.id === slot.restaurantId)
+  return {
+    reservationId: slot.id,
+    restaurantId: slot.restaurantId,
+    restaurantName: restaurant?.name ?? '알 수 없는 식당',
+    sessionId: slot.id,
+    tableId: slot.tableId,
+    capacity: slot.tableCapacity,
+    startAt: slot.startAt,
+    endAt: slot.endAt,
+    reservationStatus: slot.status === 'FULL' || slot.status === 'CLOSED' ? 'CONFIRMED' : 'RECRUITING',
+    recruitmentStatus: slot.remainingSeats > 0 ? 'OPEN' : 'CLOSED',
+    currentParticipantCount: slot.currentParticipants,
+    availableCapacity: slot.remainingSeats,
+    confirmationThreshold: slot.tableCapacity === 2 ? 2 : slot.tableCapacity - 1,
+  }
+}
 
 const mockRepository: ReservationRepository = {
   async getMine() { return reservations },
-  async create(input) {
-    const slot = reservationSlots.find((item) => item.id === input.timeSlotId)
-    const restaurant = restaurants.find((item) => item.id === slot?.restaurantId)
-    if (!slot || slot.remainingSeats < input.partySize) throw new Error('선택한 시간대의 잔여 좌석을 확인해주세요.')
-    return {
-      id: Date.now(),
-      restaurantId: slot.restaurantId,
-      restaurantName: restaurant?.name ?? '선택한 식당',
-      hostName: '나',
-      dateTime: slot.dateTime,
-      capacity: slot.tableCapacity,
-      joined: input.partySize,
-      status: 'CONFIRMED',
-      recruitmentStatus: input.partySize >= slot.remainingSeats ? 'CLOSED' : 'OPEN',
-    }
+  async searchRecruiting() {
+    return reservationSlots.filter((slot) => slot.remainingSeats > 0).map(toRecruitingReservationItem)
   },
-  async join(id) { const item = reservations.find((value) => value.id === id); if (!item) throw new Error('예약을 찾을 수 없습니다.'); return { ...item, joined: Math.min(item.capacity, item.joined + 1) } },
 }
 
 const httpRepository: ReservationRepository = {
   async getMine() { return (await apiClient.get<Reservation[]>('/reservations/me')).data },
-  async create(input) { return (await apiClient.post<Reservation>('/reservations', input)).data },
-  async join(id) { return (await apiClient.post<Reservation>(`/reservations/${id}/participants`)).data },
+  async searchRecruiting(params) {
+    const response = await apiClient.get<{ data: { content: RecruitingReservationItem[] } }>(
+      '/reservations/search', { params },
+    )
+    return response.data.data.content
+  },
 }
 
 export const reservationRepository = apiConfig.useMock ? mockRepository : httpRepository
