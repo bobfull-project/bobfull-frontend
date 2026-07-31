@@ -42,13 +42,24 @@ export function RestaurantDetailPage() {
               <div>
                 <p className="flex items-center gap-2 text-sm font-semibold"><CalendarDays size={16} className="text-brand" />{formatDateTime(slot.startAt)}</p>
                 <p className="mt-3 flex items-center gap-2 text-sm text-muted"><Clock3 size={15} />{slot.startAt.slice(11, 16)}~{slot.endAt.slice(11, 16)}</p>
-                <p className="mt-2 flex items-center gap-2 text-sm text-muted"><Users size={15} /><strong className={soldOut ? 'text-muted' : 'text-brand'}>{soldOut ? '잔여 좌석 없음' : `잔여 좌석 ${slot.availableCapacity}석`}</strong><span>({slot.capacity}인 테이블)</span></p>
+                <p className="mt-2 flex items-center gap-2 text-sm text-muted"><Users size={15} /><strong className={soldOut ? 'text-muted' : 'text-brand'}>{soldOut ? '잔여 좌석 없음' : `잔여 좌석 ${slot.availableCapacity}석`}</strong><span>({slot.currentParticipantCount}/{slot.capacity}인)</span></p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${soldOut ? 'bg-surface text-muted' : 'bg-accent-soft text-accent-active'}`}>{soldOut ? '마감' : '예약 가능'}</span>
             </div>
             {soldOut
               ? <Button fullWidth variant="secondary" className="mt-5" disabled>예약 마감</Button>
-              : <Link to={`/restaurants/${id}/reservations/new`} state={{ session: slot, restaurantName: restaurant.name, depositPerPerson: restaurant.depositPerPerson }}><Button fullWidth className="mt-5">이 시간대 예약하기</Button></Link>}
+              : <Link
+                  to={`/restaurants/${id}/reservations/new`}
+                  state={{
+                    type: slot.reservationId === null ? 'CREATE' : 'JOIN',
+                    targetId: slot.reservationId ?? slot.sessionId,
+                    session: slot,
+                    restaurantName: restaurant.name,
+                    depositPerPerson: restaurant.depositPerPerson,
+                  }}
+                >
+                  <Button fullWidth className="mt-5">{slot.reservationId === null ? '이 시간대 예약하기' : '참여하기'}</Button>
+                </Link>}
           </div>
         })}
       </div>

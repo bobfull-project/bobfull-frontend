@@ -1,19 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { prepareReservationPaymentMock } from '@/features/payments/api/preparePaymentMock'
+import { prepareReservationPayment } from '@/features/payments/api/prepareReservationPayment'
 import { usePortOnePayment } from '@/features/payments/hooks/usePortOnePayment'
 import { portoneConfig } from '@/features/payments/portoneConfig'
-import { reservationRepository } from '@/features/reservations/api/reservationRepository'
 import { reservationSchema, type ReservationFormValues } from '@/features/reservations/schemas'
 import type { AvailableDiningSession } from '@/features/restaurants/api/sessionApi'
 import { formatDateTime } from '@/lib/utils'
 
 interface ReservationFormLocationState {
+  /** CREATE: 식당 상세에서 새 회차 예약. JOIN: 모집중 목록에서 기존 예약 참여. */
+  type: 'CREATE' | 'JOIN'
+  /** CREATE는 sessionId, JOIN은 기존 reservationId. */
+  targetId: number
   session: AvailableDiningSession
   restaurantName: string
   depositPerPerson: number
@@ -45,15 +48,18 @@ export function ReservationFormPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const { pay, isProcessing } = usePortOnePayment()
 
-  // partySize가 바뀌면 결제 금액이 바뀌므로 결제 준비를 다시 계산한다(실제 연동 시 백엔드 예약 준비 API 호출로 교체).
-  const prepared = useMemo(() => {
-    if (!state) return null
-    return prepareReservationPaymentMock({
-      restaurantName: state.restaurantName,
-      depositPerPerson: state.depositPerPerson,
+  // partySize가 바뀌면 결제 금액이 바뀌므로 결제 준비를 다시 호출한다.
+  const prepareQuery = useQuery({
+    queryKey: ['reservation-prepare', state?.type, state?.targetId, partySize],
+    queryFn: () => prepareReservationPayment({
+      type: state!.type,
+      targetId: state!.targetId,
       partySize,
-    })
-  }, [state, partySize])
+      restaurantName: state!.restaurantName,
+    }),
+    enabled: !!state && partySize > 0,
+  })
+  const prepared = prepareQuery.data ?? null
 
   // 1초마다 리렌더해 남은 결제 유효시간을 표시한다. setState는 인터벌 콜백 안에서만 일어난다.
   const [tick, setTick] = useState(0)
@@ -67,11 +73,6 @@ export function ReservationFormPage() {
     return prepared ? remainingSeconds(prepared.expiresAt) : 0
   }, [prepared, tick])
 
-  const createMutation = useMutation({
-    mutationFn: () => reservationRepository.create({ timeSlotId: state!.session.sessionId, partySize }),
-    onSuccess: () => navigate('/reservations'),
-  })
-
   const isExpired = prepared !== null && secondsLeft <= 0
 
   const onSubmit = handleSubmit(async () => {
@@ -79,7 +80,7 @@ export function ReservationFormPage() {
     setPaymentError(null)
     const outcome = await pay(prepared)
     if (outcome.status === 'SUCCESS') {
-      createMutation.mutate()
+      navigate('/reservations')
       return
     }
     if (outcome.status === 'EXPIRED') {
@@ -111,15 +112,16 @@ export function ReservationFormPage() {
       <div className="rounded-2xl border border-line p-5">
         <div className="flex items-center justify-between text-sm"><span className="text-muted">1인당 예약금</span><strong>{depositPerPerson.toLocaleString()}원</strong></div>
         <div className="mt-3 flex items-center justify-between border-t border-line pt-3"><span className="font-semibold">결제 예정 금액</span><strong className="text-lg text-brand">{(depositPerPerson * partySize).toLocaleString()}원</strong></div>
+        {prepareQuery.isLoading && <p className="mt-3 text-xs text-muted">결제 준비 중...</p>}
         {prepared && <p className="mt-3 text-xs text-muted">결제 유효시간: {isExpired ? '만료됨' : formatRemaining(secondsLeft)}</p>}
         {portoneConfig.isDemo && <p className="mt-2 text-xs font-medium text-brand">PortOne 공식 테스트 채널 · 실제 청구되지 않습니다.</p>}
       </div>
       {paymentError && <p className="text-sm text-red-700">{paymentError}</p>}
-      {createMutation.isError && <p className="text-sm text-red-700">{createMutation.error.message}</p>}
+      {prepareQuery.isError && <p className="text-sm text-red-700">예약 준비에 실패했습니다. 다시 시도해주세요.</p>}
       <div className="flex justify-end gap-3">
         <Button type="button" variant="ghost" onClick={() => navigate(-1)}>취소</Button>
-        <Button type="submit" disabled={!prepared || isExpired || isProcessing || createMutation.isPending}>
-          {isProcessing ? '결제창 여는 중...' : createMutation.isPending ? '예약 처리 중...' : isExpired ? '결제 유효시간 만료' : portoneConfig.isDemo ? 'PortOne 테스트 결제창 열기' : '결제하고 예약하기'}
+        <Button type="submit" disabled={!prepared || isExpired || isProcessing}>
+          {isProcessing ? '결제창 여는 중...' : isExpired ? '결제 유효시간 만료' : portoneConfig.isDemo ? 'PortOne 테스트 결제창 열기' : '결제하고 예약하기'}
         </Button>
       </div>
     </form>
