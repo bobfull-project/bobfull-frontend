@@ -8,13 +8,15 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { getMyRestaurant } from '@/features/owner/api/restaurantApi'
 import { deleteSession, getOwnerSessions, registerSessionsBulk } from '@/features/owner/api/sessionApi'
-import { getTables, registerTable } from '@/features/owner/api/tableApi'
+import { getTables, registerTablesBulk } from '@/features/owner/api/tableApi'
+
+const TABLE_CAPACITIES = [2, 4, 6, 8] as const
 
 const today = new Date().toLocaleDateString('sv-SE')
 
 const tableSchema = z.object({
-  capacity: z.number().int().min(1, '최대 이용 인원은 1명 이상이어야 합니다.').max(100),
-  count: z.number().int().min(1, '생성할 테이블 수는 1개 이상이어야 합니다.').max(50),
+  capacity: z.number().refine((value) => TABLE_CAPACITIES.includes(value as 2 | 4 | 6 | 8), '2, 4, 6, 8명 중 선택해주세요.'),
+  count: z.number().int().min(1, '생성할 테이블 수는 1개 이상이어야 합니다.').max(10, '한 번에 최대 10개까지 등록할 수 있습니다.'),
 })
 
 const slotSchema = z.object({
@@ -86,13 +88,10 @@ export function OwnerRestaurantManagePage() {
     mode: 'onChange',
   })
   const watched = useWatch({ control: slotForm.control })
+  const selectedCapacity = useWatch({ control: tableForm.control, name: 'capacity' })
 
   const addTablesMutation = useMutation({
-    mutationFn: async (values: TableValues) => {
-      for (let i = 0; i < values.count; i += 1) {
-        await registerTable(restaurantId, values.capacity)
-      }
-    },
+    mutationFn: (values: TableValues) => registerTablesBulk(restaurantId, values.capacity, values.count),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId, 'tables'] })
       tableForm.reset({ capacity: 4, count: 1 })
@@ -171,15 +170,15 @@ export function OwnerRestaurantManagePage() {
     <section className="card mt-6 p-6 md:p-8">
       <p className="text-sm font-semibold text-brand">DINING TABLES</p>
       <h2 className="mt-2 text-xl font-semibold">테이블 등록</h2>
-      <p className="mt-2 text-sm text-muted">테이블 이름은 입력하지 않으며, 목록 순서로 표시됩니다.</p>
+      <p className="mt-2 text-sm text-muted">테이블 번호는 식당별로 자동 생성되며, 한 번에 최대 10개까지 등록할 수 있습니다.</p>
       <form className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end" onSubmit={tableForm.handleSubmit((values) => addTablesMutation.mutate(values))}>
-        <label><span className="label">최대 이용 인원</span><input type="number" min="1" className="field h-12" {...tableForm.register('capacity', { valueAsNumber: true })} /><span className="mt-1 block text-xs text-red-700">{tableForm.formState.errors.capacity?.message}</span></label>
-        <label><span className="label">생성할 테이블 수</span><input type="number" min="1" className="field h-12" {...tableForm.register('count', { valueAsNumber: true })} /><span className="mt-1 block text-xs text-red-700">{tableForm.formState.errors.count?.message}</span></label>
+        <div><span className="label">최대 이용 인원</span><div className="grid grid-cols-4 gap-2">{TABLE_CAPACITIES.map((capacity) => <button key={capacity} type="button" className={`h-12 rounded-xl border font-semibold transition-colors ${selectedCapacity === capacity ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-muted hover:border-brand hover:text-brand'}`} onClick={() => tableForm.setValue('capacity', capacity, { shouldValidate: true })}>{capacity}명</button>)}</div><span className="mt-1 block text-xs text-red-700">{tableForm.formState.errors.capacity?.message}</span></div>
+        <label><span className="label">생성할 테이블 수</span><input type="number" min="1" max="10" className="field h-12" {...tableForm.register('count', { valueAsNumber: true })} /><span className="mt-1 block text-xs text-red-700">{tableForm.formState.errors.count?.message}</span></label>
         <Button type="submit" className="h-12 gap-2" disabled={addTablesMutation.isPending}><Plus size={17} />{addTablesMutation.isPending ? '등록 중...' : '테이블 등록'}</Button>
       </form>
       {addTablesMutation.isError && <p className="mt-2 text-sm text-red-700">테이블 등록에 실패했습니다.</p>}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {tables.map((table, index) => <div key={table.tableId} className="rounded-2xl border border-line bg-surface p-4"><p className="font-semibold">테이블 {index + 1}</p><p className="mt-1 text-sm text-muted">최대 {table.capacity}명</p></div>)}
+        {tables.map((table) => <div key={table.tableId} className="rounded-2xl border border-line bg-surface p-4"><p className="font-semibold">테이블 {table.displayNumber}</p><p className="mt-1 text-sm text-muted">최대 {table.capacity}명</p></div>)}
         {tablesQuery.isLoading && <p className="text-sm text-muted">불러오는 중입니다.</p>}
         {!tablesQuery.isLoading && tables.length === 0 && <p className="text-sm text-muted">등록된 테이블이 없습니다.</p>}
       </div>
@@ -197,7 +196,7 @@ export function OwnerRestaurantManagePage() {
           <span className="label">적용할 테이블</span>
           <div className="grid gap-3 rounded-2xl border border-line p-4 sm:grid-cols-2 lg:grid-cols-3">
             <label className="flex cursor-pointer items-center gap-3 font-semibold"><input type="checkbox" checked={allSelected} onChange={toggleAll} />전체 테이블</label>
-            {tables.map((table, index) => <label key={table.tableId} className="flex cursor-pointer items-center gap-3"><input type="checkbox" value={table.tableId} {...slotForm.register('tableIds')} />테이블 {index + 1} · 최대 {table.capacity}명</label>)}
+            {tables.map((table) => <label key={table.tableId} className="flex cursor-pointer items-center gap-3"><input type="checkbox" value={table.tableId} {...slotForm.register('tableIds')} />테이블 {table.displayNumber} · 최대 {table.capacity}명</label>)}
           </div>
           <span className="mt-2 block text-xs text-red-700">{slotForm.formState.errors.tableIds?.message}</span>
         </div>
@@ -205,7 +204,7 @@ export function OwnerRestaurantManagePage() {
         <div className="rounded-2xl bg-brand-soft p-5 md:col-span-2 xl:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">생성 결과 미리보기</h3><span className="text-sm font-semibold text-brand">총 {previewCount}개 회차</span></div>
           <p className="mt-1 text-sm text-muted">{watched.reservationDate ? new Intl.DateTimeFormat('ko-KR', { dateStyle: 'long' }).format(new Date(`${watched.reservationDate}T00:00:00`)) : '예약 날짜를 선택해주세요.'}</p>
-          {preview.length === 0 ? <p className="mt-4 text-sm text-muted">테이블과 올바른 시간 조건을 선택하면 생성 결과가 표시됩니다.</p> : <div className="mt-4 grid gap-3 md:grid-cols-2">{preview.map(({ table, times }) => <div key={table.tableId} className="rounded-2xl bg-white p-4"><p className="font-semibold">테이블 {tables.findIndex((item) => item.tableId === table.tableId) + 1} · 최대 {table.capacity}명</p><ul className="mt-3 space-y-1 text-sm text-muted">{times.map((time) => <li key={time.startTime}>- {time.startTime}~{time.endTime}</li>)}</ul></div>)}</div>}
+          {preview.length === 0 ? <p className="mt-4 text-sm text-muted">테이블과 올바른 시간 조건을 선택하면 생성 결과가 표시됩니다.</p> : <div className="mt-4 grid gap-3 md:grid-cols-2">{preview.map(({ table, times }) => <div key={table.tableId} className="rounded-2xl bg-white p-4"><p className="font-semibold">테이블 {table.displayNumber} · 최대 {table.capacity}명</p><ul className="mt-3 space-y-1 text-sm text-muted">{times.map((time) => <li key={time.startTime}>- {time.startTime}~{time.endTime}</li>)}</ul></div>)}</div>}
         </div>
         <Button type="submit" className="gap-2 md:col-span-2 xl:col-span-3" disabled={tables.length === 0 || addSessionsMutation.isPending}><CalendarPlus size={17} />{addSessionsMutation.isPending ? '생성 중...' : '예약 회차 생성'}</Button>
       </form>
@@ -218,7 +217,7 @@ export function OwnerRestaurantManagePage() {
       {!sessionsQuery.isLoading && sessions.length === 0 && <div className="grid min-h-52 place-items-center p-8 text-center text-sm text-muted">생성된 예약 회차가 없습니다.</div>}
       {sessions.length > 0 && <div>{sessions.map((session) => <article key={session.sessionId} className="grid gap-3 border-b border-line p-5 last:border-0 md:grid-cols-[auto_1fr_auto_auto] md:items-center">
         <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><Clock3 size={20} /></span>
-        <div><p className="font-semibold">테이블 {tables.findIndex((item) => item.tableId === session.tableId) + 1}</p><p className="mt-1 text-sm text-muted">{formatSessionTime(session.startAt)} ~ {new Date(session.endAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</p></div>
+        <div><p className="font-semibold">테이블 {tables.find((item) => item.tableId === session.tableId)?.displayNumber ?? '-'}</p><p className="mt-1 text-sm text-muted">{formatSessionTime(session.startAt)} ~ {new Date(session.endAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</p></div>
         <p className="flex items-center gap-2 text-sm text-muted"><Users size={15} />정원 {session.capacity}명</p>
         <Button type="button" variant="ghost" className="gap-2 text-red-700" disabled={deleteSessionMutation.isPending} onClick={() => deleteSessionMutation.mutate(session.sessionId)}><Trash2 size={16} />삭제</Button>
       </article>)}</div>}
