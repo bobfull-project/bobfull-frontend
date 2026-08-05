@@ -27,7 +27,9 @@ export function OwnerRestaurantListPage() {
       ? <EmptyState title="등록한 식당이 없습니다" description="먼저 식당을 등록한 후 예약 가능 시간을 설정해주세요." />
       : <div className="grid gap-4">
         {restaurants.map((restaurant) => <Link key={restaurant.restaurantId} to={`/owner/restaurants/${restaurant.restaurantId}`} className="card flex items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-card">
-          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand"><Store size={24} /></span>
+          {restaurant.imageUrl
+            ? <img src={restaurant.imageUrl} alt={`${restaurant.name} 이미지`} className="size-14 shrink-0 rounded-2xl object-cover" />
+            : <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand"><Store size={24} /></span>}
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-semibold">{restaurant.name}</h2>

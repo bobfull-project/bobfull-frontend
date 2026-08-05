@@ -157,7 +157,9 @@ export function OwnerRestaurantManagePage() {
     <section className="card overflow-hidden">
       <div className="border-b border-line bg-brand-soft px-6 py-4 text-sm font-semibold text-brand">식당 정보 미리보기</div>
       <div className="grid gap-6 p-6 md:grid-cols-[120px_1fr] md:p-8">
-        <span className="grid size-24 place-items-center rounded-[24px] bg-accent-soft text-accent"><Store size={38} /></span>
+        {restaurant.imageUrl
+          ? <img src={restaurant.imageUrl} alt={`${restaurant.name} 이미지`} className="size-24 rounded-[24px] object-cover" />
+          : <span className="grid size-24 place-items-center rounded-[24px] bg-accent-soft text-accent"><Store size={38} /></span>}
         <div>
           <div className="flex flex-wrap items-center gap-3"><h2 className="text-2xl font-semibold">{restaurant.name}</h2><span className="rounded-full bg-sub-soft px-3 py-1 text-xs font-semibold text-brand">{restaurant.category}</span></div>
           <p className="mt-4 flex items-start gap-2 text-sm text-muted"><MapPin size={16} className="mt-0.5 shrink-0" />{restaurant.address}</p>
