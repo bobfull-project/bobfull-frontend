@@ -12,6 +12,7 @@ export interface Restaurant {
   rating: number
   priceRange: string
   image: string
+  imageUrl?: string
   tags: string[]
   depositPerPerson: number
 }

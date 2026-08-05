@@ -7,6 +7,7 @@ export interface OwnerRestaurantSummary {
   category: string
   depositPerPerson: number
   status: string
+  imageUrl?: string
 }
 
 export interface OwnerRestaurantDetail extends OwnerRestaurantSummary {
@@ -21,6 +22,19 @@ export interface RestaurantInput {
   description: string
   keyword: string
   depositPerPerson: number
+  imageKey?: string
+}
+
+export interface RestaurantImageUploadUrlInput {
+  extension: string
+  contentType: string
+  fileSize: number
+}
+
+export interface RestaurantImageUploadUrlResponse {
+  uploadUrl: string
+  tempImageKey: string
+  finalImageKey: string
 }
 
 interface PageResponse<T> {
@@ -46,6 +60,30 @@ export async function getMyRestaurant(restaurantId: number): Promise<OwnerRestau
 export async function registerRestaurant(input: RestaurantInput): Promise<number> {
   const response = await apiClient.post<{ data: { restaurantId: number } }>('/owner/restaurants', input)
   return response.data.data.restaurantId
+}
+
+export async function uploadRestaurantImageFile(
+  file: File,
+  input: RestaurantImageUploadUrlInput,
+): Promise<RestaurantImageUploadUrlResponse> {
+  const uploadUrlResponse = await apiClient.post<{ data: RestaurantImageUploadUrlResponse }>(
+    '/owner/restaurants/images/upload-url',
+    input,
+  )
+  const uploadInfo = uploadUrlResponse.data.data
+  const uploadResponse = await fetch(uploadInfo.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type,
+    },
+    body: file,
+  })
+
+  if (!uploadResponse.ok) {
+    throw new Error('이미지 업로드에 실패했습니다.')
+  }
+
+  return uploadInfo
 }
 
 export async function updateRestaurant(

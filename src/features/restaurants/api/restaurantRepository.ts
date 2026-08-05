@@ -40,6 +40,7 @@ interface BackendRestaurant {
   description: string
   keyword: string
   depositPerPerson: number
+  imageUrl?: string
 }
 
 // 목록·검색 응답(3-5, RestaurantSearchResponse)은 상세 조회와 달리 description을 주지 않는다.
@@ -56,6 +57,7 @@ function toRestaurant(backend: BackendRestaurant): Restaurant {
     rating: 0,
     priceRange: `1인 ${backend.depositPerPerson.toLocaleString()}원`,
     image: '🍽️',
+    imageUrl: backend.imageUrl,
     tags: backend.keyword ? backend.keyword.split(',').map((tag) => tag.trim()).filter(Boolean) : [],
   }
 }
