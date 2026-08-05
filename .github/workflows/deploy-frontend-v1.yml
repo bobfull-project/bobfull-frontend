@@ -1,0 +1,124 @@
+name: Deploy Frontend V1
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/deploy-frontend-v1.yml'
+      - 'index.html'
+      - 'package-lock.json'
+      - 'package.json'
+      - 'postcss.config.js'
+      - 'public/**'
+      - 'src/**'
+      - 'tailwind.config.ts'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-v1-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  FRONTEND_S3_BUCKET: ${{ vars.FRONTEND_S3_BUCKET }}
+  FRONTEND_PUBLIC_BASE_URL: ${{ vars.FRONTEND_PUBLIC_BASE_URL }}
+  FRONTEND_PARAMETER_PREFIX: ${{ vars.FRONTEND_PARAMETER_PREFIX || '/bobfull/prod' }}
+
+jobs:
+  deploy:
+    name: Build and deploy to S3
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment settings
+        env:
+          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        run: |
+          set -euo pipefail
+
+          required_values=(
+            AWS_REGION
+            FRONTEND_S3_BUCKET
+            FRONTEND_PUBLIC_BASE_URL
+            FRONTEND_PARAMETER_PREFIX
+            AWS_ROLE_TO_ASSUME
+          )
+
+          for key in "${required_values[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required GitHub secret or variable: ${key}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Load public build parameters
+        run: |
+          set -euo pipefail
+
+          parameter_prefix="${FRONTEND_PARAMETER_PREFIX%/}"
+
+          api_base_url="$(aws ssm get-parameter \
+            --region "${AWS_REGION}" \
+            --name "${parameter_prefix}/frontend-api-base-url" \
+            --query 'Parameter.Value' \
+            --output text)"
+
+          portone_store_id="$(aws ssm get-parameter \
+            --region "${AWS_REGION}" \
+            --name "${parameter_prefix}/portone-store-id" \
+            --query 'Parameter.Value' \
+            --output text)"
+
+          portone_channel_key="$(aws ssm get-parameter \
+            --region "${AWS_REGION}" \
+            --name "${parameter_prefix}/portone-channel-key" \
+            --query 'Parameter.Value' \
+            --output text)"
+
+          {
+            printf 'VITE_API_BASE_URL=%s\n' "${api_base_url}"
+            printf 'VITE_USE_MOCK=false\n'
+            printf 'VITE_PORTONE_STORE_ID=%s\n' "${portone_store_id}"
+            printf 'VITE_PORTONE_CHANNEL_KEY=%s\n' "${portone_channel_key}"
+          } > .env.production
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to S3
+        run: |
+          set -euo pipefail
+          aws s3 sync dist "s3://${FRONTEND_S3_BUCKET}" --delete
+
+      - name: Verify frontend page
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            "${FRONTEND_PUBLIC_BASE_URL%/}/" \
+            >/tmp/bobfull-frontend-index.html
+          test -s /tmp/bobfull-frontend-index.html
