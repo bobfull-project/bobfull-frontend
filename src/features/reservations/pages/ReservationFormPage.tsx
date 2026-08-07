@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -35,6 +35,7 @@ function formatRemaining(seconds: number) {
 export function ReservationFormPage() {
   const restaurantId = Number(useParams().restaurantId)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const location = useLocation()
   // 회차 상세 조회 API가 따로 없어서, 식당 상세 페이지에서 고른 회차 정보를 라우터 state로 그대로 전달받는다.
   // 새로고침 등으로 state가 사라지면 식당 상세로 돌려보낸다.
@@ -46,20 +47,32 @@ export function ReservationFormPage() {
   const partySize = useWatch({ control, name: 'partySize' }) || 1
 
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [confirmedPartySize, setConfirmedPartySize] = useState<number | null>(null)
   const { pay, isProcessing } = usePortOnePayment()
 
-  // partySize가 바뀌면 결제 금액이 바뀌므로 결제 준비를 다시 호출한다.
+  // 인원 입력만으로 좌석을 잠그지 않는다. 사용자가 인원을 확정한 뒤에만 READY 결제를 만든다.
   const prepareQuery = useQuery({
-    queryKey: ['reservation-prepare', state?.type, state?.targetId, partySize],
+    queryKey: ['reservation-prepare', state?.type, state?.targetId, confirmedPartySize],
     queryFn: () => prepareReservationPayment({
       type: state!.type,
       targetId: state!.targetId,
-      partySize,
+      partySize: confirmedPartySize!,
       restaurantName: state!.restaurantName,
     }),
-    enabled: !!state && partySize > 0,
+    enabled: !!state && confirmedPartySize !== null && confirmedPartySize > 0,
+    retry: false,
   })
-  const prepared = prepareQuery.data ?? null
+  const isPartySizeConfirmed = confirmedPartySize === partySize
+  const prepared = isPartySizeConfirmed ? prepareQuery.data ?? null : null
+
+  const confirmPartySize = handleSubmit(({ partySize: value }) => {
+    setPaymentError(null)
+    if (confirmedPartySize === value) {
+      void prepareQuery.refetch()
+      return
+    }
+    setConfirmedPartySize(value)
+  })
 
   // 1초마다 리렌더해 남은 결제 유효시간을 표시한다. setState는 인터벌 콜백 안에서만 일어난다.
   const [tick, setTick] = useState(0)
@@ -80,7 +93,8 @@ export function ReservationFormPage() {
     setPaymentError(null)
     const outcome = await pay(prepared)
     if (outcome.status === 'SUCCESS') {
-      navigate('/reservations')
+      await queryClient.invalidateQueries({ queryKey: ['reservations', 'me'] })
+      navigate('/reservations', { replace: true })
       return
     }
     if (outcome.status === 'EXPIRED') {
@@ -105,19 +119,21 @@ export function ReservationFormPage() {
       </div>
       <label className="block">
         <span className="label">예약 인원</span>
-        <input type="number" min="1" max={session.availableCapacity} className="field" {...register('partySize', { valueAsNumber: true, max: session.availableCapacity })} />
+        <div className="flex gap-3"><input type="number" min="1" max={session.availableCapacity} className="field" {...register('partySize', { valueAsNumber: true, max: session.availableCapacity, onChange: () => { setConfirmedPartySize(null); setPaymentError(null) } })} /><Button type="button" className="shrink-0" disabled={prepareQuery.isLoading && isPartySizeConfirmed} onClick={confirmPartySize}>{prepareQuery.isLoading && isPartySizeConfirmed ? '확정 중...' : isPartySizeConfirmed && prepared ? '확정됨' : '인원 확정'}</Button></div>
         <span className="mt-1 block text-xs text-muted">최대 {session.availableCapacity}명까지 예약할 수 있습니다.</span>
+        {!isPartySizeConfirmed && <span className="mt-1 block text-xs text-brand">인원을 확정해야 좌석 확보와 결제 타이머가 시작됩니다.</span>}
         <span className="mt-1 block text-xs text-red-700">{errors.partySize?.message}</span>
       </label>
       <div className="rounded-2xl border border-line p-5">
         <div className="flex items-center justify-between text-sm"><span className="text-muted">1인당 예약금</span><strong>{depositPerPerson.toLocaleString()}원</strong></div>
         <div className="mt-3 flex items-center justify-between border-t border-line pt-3"><span className="font-semibold">결제 예정 금액</span><strong className="text-lg text-brand">{(depositPerPerson * partySize).toLocaleString()}원</strong></div>
-        {prepareQuery.isLoading && <p className="mt-3 text-xs text-muted">결제 준비 중...</p>}
+        {!isPartySizeConfirmed && <p className="mt-3 text-xs text-muted">아직 좌석을 확보하지 않았습니다.</p>}
+        {prepareQuery.isLoading && isPartySizeConfirmed && <p className="mt-3 text-xs text-muted">좌석을 확보하고 결제를 준비하는 중...</p>}
         {prepared && <p className="mt-3 text-xs text-muted">결제 유효시간: {isExpired ? '만료됨' : formatRemaining(secondsLeft)}</p>}
         {portoneConfig.isDemo && <p className="mt-2 text-xs font-medium text-brand">PortOne 공식 테스트 채널 · 실제 청구되지 않습니다.</p>}
       </div>
       {paymentError && <p className="text-sm text-red-700">{paymentError}</p>}
-      {prepareQuery.isError && <p className="text-sm text-red-700">예약 준비에 실패했습니다. 다시 시도해주세요.</p>}
+      {prepareQuery.isError && isPartySizeConfirmed && <p className="text-sm text-red-700">예약 준비에 실패했습니다. 인원 확정을 다시 눌러주세요.</p>}
       <div className="flex justify-end gap-3">
         <Button type="button" variant="ghost" onClick={() => navigate(-1)}>취소</Button>
         <Button type="submit" disabled={!prepared || isExpired || isProcessing}>

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { apiClient } from '@/lib/api/client'
 import { useAuthStore } from '@/stores/authStore'
 
-interface LoginResponse { accessToken: string; tokenType: string }
+interface LoginResponse { accessToken: string; tokenType: string; refreshToken: string }
 interface SignupResponse { memberId: number; email: string; name: string; role: 'MEMBER' | 'OWNER' | 'ADMIN' }
 interface MemberResponse { memberId: number; email: string; name: string; role: 'MEMBER' | 'OWNER' | 'ADMIN' }
 
@@ -44,12 +44,12 @@ export function AuthPage({ mode, audience }: { mode: 'login' | 'signup'; audienc
 
   const loginAndSetSession = async (email: string, password: string) => {
     const loginResponse = await apiClient.post<{ data: LoginResponse }>('/auth/login', { email, password })
-    const accessToken = loginResponse.data.data.accessToken
+    const { accessToken, refreshToken } = loginResponse.data.data
     const meResponse = await apiClient.get<{ data: MemberResponse }>('/members/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
     const me = meResponse.data.data
-    setSession(accessToken, me.name, me.role === 'OWNER' ? 'owner' : 'member')
+    setSession(accessToken, refreshToken, me.name, me.role === 'OWNER' ? 'owner' : me.role === 'ADMIN' ? 'admin' : 'member')
   }
 
   const onSubmit = async (values: Values) => {
@@ -64,7 +64,8 @@ export function AuthPage({ mode, audience }: { mode: 'login' | 'signup'; audienc
         await apiClient.post<{ data: SignupResponse }>(path, payload)
       }
       await loginAndSetSession(values.email, values.password)
-      navigate(audience === 'owner' ? '/owner' : '/')
+      const role = useAuthStore.getState().role
+      navigate(role === 'admin' ? '/admin' : audience === 'owner' ? '/owner' : '/')
     } catch (error) {
       setSubmitError(toApiErrorMessage(error, isSignup ? '가입에 실패했습니다.' : '이메일 또는 비밀번호가 일치하지 않습니다.'))
     } finally {

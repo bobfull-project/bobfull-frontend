@@ -3,6 +3,7 @@ import { apiClient } from '@/lib/api/client'
 export interface OwnerTable {
   tableId: number
   restaurantId: number
+  displayNumber: number
   capacity: number
   status: string
 }
@@ -22,11 +23,20 @@ export async function getTables(restaurantId: number): Promise<OwnerTable[]> {
   return response.data.data.content
 }
 
-export async function registerTable(restaurantId: number, capacity: number): Promise<number> {
-  const response = await apiClient.post<{ data: { tableId: number } }>(
-    `/owner/restaurants/${restaurantId}/tables`, { capacity },
+export interface TableBulkRegisterResponse {
+  createdTableCount: number
+  tables: OwnerTable[]
+}
+
+export async function registerTablesBulk(
+  restaurantId: number,
+  capacity: number,
+  count: number,
+): Promise<TableBulkRegisterResponse> {
+  const response = await apiClient.post<{ data: TableBulkRegisterResponse }>(
+    `/owner/restaurants/${restaurantId}/tables/bulk`, { capacity, count },
   )
-  return response.data.data.tableId
+  return response.data.data
 }
 
 export async function updateTable(tableId: number, capacity: number): Promise<void> {

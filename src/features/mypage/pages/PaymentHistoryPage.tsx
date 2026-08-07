@@ -18,6 +18,7 @@ const paymentStatusLabel: Record<PaymentStatus, string> = {
   EXPIRED: '만료됨',
   FAILED: '결제 실패',
   CANCELLED: '취소됨',
+  REFUNDED: '환불 완료',
 }
 
 const refundStatusLabel: Record<RefundStatus, string> = {

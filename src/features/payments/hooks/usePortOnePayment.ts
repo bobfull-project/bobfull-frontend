@@ -1,4 +1,4 @@
-import { requestPayment, type PaymentCurrency } from '@portone/browser-sdk/v2'
+import type { PaymentCurrency } from '@portone/browser-sdk/v2'
 import { useState } from 'react'
 import { completePayment } from '@/features/payments/api/paymentApi'
 import { assertPortoneConfigured, portoneConfig } from '@/features/payments/portoneConfig'
@@ -15,6 +15,7 @@ export function usePortOnePayment() {
     setIsProcessing(true)
     try {
       assertPortoneConfigured()
+      const { requestPayment } = await import('@portone/browser-sdk/v2')
       const response = await requestPayment({
         storeId: portoneConfig.storeId!,
         channelKey: portoneConfig.channelKey!,

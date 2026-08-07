@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/api/client'
 
 export type PaymentPurpose = 'CREATE' | 'JOIN'
-export type PaymentStatus = 'READY' | 'PAID' | 'EXPIRED' | 'FAILED' | 'CANCELLED'
+export type PaymentStatus = 'READY' | 'PAID' | 'EXPIRED' | 'FAILED' | 'CANCELLED' | 'REFUNDED'
 export type RefundStatus = 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
 
 export interface PaymentHistoryItem {
