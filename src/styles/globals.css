@@ -18,4 +18,28 @@
   .card { @apply rounded-card border border-line bg-white shadow-card; }
   .field { @apply h-14 w-full rounded-2xl border border-line bg-white px-4 text-[15px] outline-none transition focus:border-sub focus:ring-1 focus:ring-sub; }
   .label { @apply mb-2 block text-sm font-medium text-ink; }
+  .chat-grain-background {
+    background-color: #fffaf0;
+    background-image: url('../assets/chat-background-landscape.webp');
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: scroll;
+  }
+  .chat-bubble { @apply relative inline-block px-4 py-3 text-left text-sm shadow-sm; }
+  .chat-bubble-mine { @apply rounded-[20px] rounded-br-md border border-[#efa268] bg-[#fff8f1] text-ink; }
+  .chat-bubble-other { @apply rounded-[20px] rounded-tl-md border border-line bg-white text-ink; }
+  .chat-bubble-mine::after,
+  .chat-bubble-other::after {
+    content: '';
+    @apply absolute top-0 h-3 w-3;
+  }
+  .chat-bubble-mine::after {
+    @apply -right-1 bottom-0 top-auto bg-[#fff8f1];
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+  }
+  .chat-bubble-other::after {
+    @apply -left-1 bg-white;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
 }

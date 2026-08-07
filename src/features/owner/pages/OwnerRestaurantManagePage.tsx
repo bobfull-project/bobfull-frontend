@@ -1,14 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarPlus, Clock3, MapPin, Plus, Store, Trash2, Users } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
-import { getMyRestaurant } from '@/features/owner/api/restaurantApi'
-import { deleteSession, getOwnerSessions, registerSessionsBulk } from '@/features/owner/api/sessionApi'
-import { getTables, registerTablesBulk } from '@/features/owner/api/tableApi'
+import { deleteRestaurant, getMyRestaurant, updateRestaurant } from '@/features/owner/api/restaurantApi'
+import { deleteSession, getOwnerSessions, registerSessionsBulk, updateSession } from '@/features/owner/api/sessionApi'
+import { deleteTable, getTables, registerTablesBulk, updateTable } from '@/features/owner/api/tableApi'
 
 const TABLE_CAPACITIES = [2, 4, 6, 8] as const
 
@@ -44,6 +44,14 @@ const toMinutes = (time: string) => {
 }
 const toTime = (minutes: number) => `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 
+function mutationErrorMessage(error: unknown) {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: { message?: string } } }).response
+    if (response?.data?.message) return response.data.message
+  }
+  return '삭제하지 못했습니다. 연결된 예약·회차가 있는지 확인해주세요.'
+}
+
 function formatSessionTime(iso: string) {
   const date = new Date(iso)
   return date.toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -51,7 +59,15 @@ function formatSessionTime(iso: string) {
 
 export function OwnerRestaurantManagePage() {
   const restaurantId = Number(useParams().restaurantId)
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [editingRestaurant, setEditingRestaurant] = useState(false)
+  const [restaurantDraft, setRestaurantDraft] = useState({ name: '', description: '', keyword: '', depositPerPerson: 0 })
+  const [editingTableId, setEditingTableId] = useState<number | null>(null)
+  const [tableCapacity, setTableCapacity] = useState(4)
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null)
+  const [sessionDraft, setSessionDraft] = useState({ startAt: '', endAt: '' })
+  const [managementError, setManagementError] = useState<string | null>(null)
 
   const restaurantQuery = useQuery({
     queryKey: ['owner', 'restaurant', restaurantId],
@@ -116,10 +132,23 @@ export function OwnerRestaurantManagePage() {
 
   const deleteSessionMutation = useMutation({
     mutationFn: (sessionId: number) => deleteSession(sessionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId, 'sessions'] })
-    },
+    onMutate: () => setManagementError(null),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId, 'sessions'] }) },
+    onError: (error) => setManagementError(mutationErrorMessage(error)),
   })
+  const updateRestaurantMutation = useMutation({ mutationFn: () => updateRestaurant(restaurantId, restaurantDraft), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId] }); setEditingRestaurant(false) } })
+  const deleteRestaurantMutation = useMutation({ mutationFn: () => deleteRestaurant(restaurantId), onMutate: () => setManagementError(null), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['owner', 'restaurants'] }); queryClient.removeQueries({ queryKey: ['owner', 'restaurant', restaurantId] }); navigate('/owner/restaurants', { replace: true }) }, onError: (error) => setManagementError(mutationErrorMessage(error)) })
+  const updateTableMutation = useMutation({ mutationFn: ({ tableId, capacity }: { tableId: number; capacity: number }) => updateTable(tableId, capacity), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId, 'tables'] }); setEditingTableId(null) } })
+  const deleteTableMutation = useMutation({
+    mutationFn: deleteTable,
+    onMutate: () => setManagementError(null),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId, 'tables'] })
+      await queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId, 'sessions'] })
+    },
+    onError: (error) => setManagementError(mutationErrorMessage(error)),
+  })
+  const updateSessionMutation = useMutation({ mutationFn: ({ sessionId, startAt, endAt }: { sessionId: number; startAt: string; endAt: string }) => updateSession(sessionId, { startAt, endAt }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['owner', 'restaurant', restaurantId, 'sessions'] }); setEditingSessionId(null) } })
 
   // 백엔드 생성 규칙과 동일하게 미리보기를 계산한다: startTime부터 intervalMinutes씩 연속 생성, endTime을 넘지 않는다.
   const preview = useMemo(() => {
@@ -151,7 +180,7 @@ export function OwnerRestaurantManagePage() {
   const toggleAll = () => slotForm.setValue('tableIds', allSelected ? [] : tables.map((table) => String(table.tableId)), { shouldValidate: true })
 
   return <div className="mx-auto max-w-6xl">
-    <header className="mb-8"><p className="text-sm font-semibold text-brand">RESTAURANT MANAGEMENT</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">식당 관리</h1><p className="mt-2 text-sm text-muted">물리적 테이블을 등록한 뒤, 선택한 테이블에 날짜별 예약 시간을 생성하세요.</p></header>
+    <header className="mb-8"><p className="text-sm font-semibold text-brand">RESTAURANT MANAGEMENT</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">식당 관리</h1><p className="mt-2 text-sm text-muted">물리적 테이블을 등록한 뒤, 선택한 테이블에 날짜별 예약 시간을 생성하세요.</p><div className="mt-4 flex flex-wrap gap-2"><Link to={`/owner/restaurants/${restaurantId}/operations`}><Button variant="secondary">노쇼·지급 예정 관리</Button></Link><Button variant="secondary" onClick={() => { setRestaurantDraft({ name: restaurant.name, description: restaurant.description, keyword: restaurant.keyword, depositPerPerson: restaurant.depositPerPerson }); setEditingRestaurant(true) }}>식당 정보 수정</Button><Button type="button" variant="secondary" className="text-red-700" disabled={deleteRestaurantMutation.isPending} onClick={() => { if (window.confirm('식당을 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) deleteRestaurantMutation.mutate() }}>{deleteRestaurantMutation.isPending ? '삭제 중...' : '식당 삭제'}</Button></div>{managementError && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{managementError}</p>}</header>
 
     <section className="card overflow-hidden">
       <div className="border-b border-line bg-brand-soft px-6 py-4 text-sm font-semibold text-brand">식당 정보 미리보기</div>
@@ -166,6 +195,7 @@ export function OwnerRestaurantManagePage() {
         </div>
       </div>
     </section>
+    {editingRestaurant && <section className="card mt-6 p-6"><h2 className="text-xl font-semibold">식당 정보 수정</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><label><span className="label">식당명</span><input className="field" value={restaurantDraft.name} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, name: e.target.value })} /></label><label><span className="label">키워드</span><input className="field" value={restaurantDraft.keyword} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, keyword: e.target.value })} /></label><label><span className="label">1인당 예약금</span><input type="number" className="field" value={restaurantDraft.depositPerPerson} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, depositPerPerson: Number(e.target.value) })} /></label><label className="md:col-span-2"><span className="label">소개</span><textarea className="field h-28" value={restaurantDraft.description} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, description: e.target.value })} /></label></div><div className="mt-5 flex justify-end gap-2"><Button variant="ghost" onClick={() => setEditingRestaurant(false)}>취소</Button><Button onClick={() => updateRestaurantMutation.mutate()} disabled={updateRestaurantMutation.isPending}>저장</Button></div></section>}
 
     <section className="card mt-6 p-6 md:p-8">
       <p className="text-sm font-semibold text-brand">DINING TABLES</p>
@@ -178,7 +208,7 @@ export function OwnerRestaurantManagePage() {
       </form>
       {addTablesMutation.isError && <p className="mt-2 text-sm text-red-700">테이블 등록에 실패했습니다.</p>}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {tables.map((table) => <div key={table.tableId} className="rounded-2xl border border-line bg-surface p-4"><p className="font-semibold">테이블 {table.displayNumber}</p><p className="mt-1 text-sm text-muted">최대 {table.capacity}명</p></div>)}
+        {tables.map((table) => <div key={table.tableId} className="rounded-2xl border border-line bg-surface p-4"><p className="font-semibold">테이블 {table.displayNumber}</p>{editingTableId === table.tableId ? <><select className="field mt-3" value={tableCapacity} onChange={(e) => setTableCapacity(Number(e.target.value))}>{TABLE_CAPACITIES.map((capacity) => <option key={capacity} value={capacity}>{capacity}명</option>)}</select><div className="mt-3 flex gap-2"><Button onClick={() => updateTableMutation.mutate({ tableId: table.tableId, capacity: tableCapacity })}>저장</Button><Button variant="ghost" onClick={() => setEditingTableId(null)}>취소</Button></div></> : <><p className="mt-1 text-sm text-muted">최대 {table.capacity}명</p><div className="mt-3 flex gap-2"><Button variant="ghost" onClick={() => { setEditingTableId(table.tableId); setTableCapacity(table.capacity) }}>수정</Button><Button type="button" variant="ghost" className="text-red-700" disabled={deleteTableMutation.isPending} onClick={() => { const linkedCount = sessions.filter((session) => session.tableId === table.tableId).length; if (linkedCount > 0) { setManagementError(`테이블 ${table.displayNumber}에 연결된 회차 ${linkedCount}개가 있습니다. 아래 회차 관리에서 해당 회차를 먼저 삭제해주세요.`); return } if (window.confirm(`테이블 ${table.displayNumber}을 삭제할까요?`)) deleteTableMutation.mutate(table.tableId) }}>{deleteTableMutation.isPending ? '삭제 중...' : '삭제'}</Button></div></>}</div>)}
         {tablesQuery.isLoading && <p className="text-sm text-muted">불러오는 중입니다.</p>}
         {!tablesQuery.isLoading && tables.length === 0 && <p className="text-sm text-muted">등록된 테이블이 없습니다.</p>}
       </div>
@@ -217,9 +247,9 @@ export function OwnerRestaurantManagePage() {
       {!sessionsQuery.isLoading && sessions.length === 0 && <div className="grid min-h-52 place-items-center p-8 text-center text-sm text-muted">생성된 예약 회차가 없습니다.</div>}
       {sessions.length > 0 && <div>{sessions.map((session) => <article key={session.sessionId} className="grid gap-3 border-b border-line p-5 last:border-0 md:grid-cols-[auto_1fr_auto_auto] md:items-center">
         <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><Clock3 size={20} /></span>
-        <div><p className="font-semibold">테이블 {tables.find((item) => item.tableId === session.tableId)?.displayNumber ?? '-'}</p><p className="mt-1 text-sm text-muted">{formatSessionTime(session.startAt)} ~ {new Date(session.endAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</p></div>
+        <div><p className="font-semibold">테이블 {tables.find((table) => table.tableId === session.tableId)?.displayNumber ?? session.tableId}</p><p className="mt-1 text-sm text-muted">{formatSessionTime(session.startAt)} ~ {new Date(session.endAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</p></div>
         <p className="flex items-center gap-2 text-sm text-muted"><Users size={15} />정원 {session.capacity}명</p>
-        <Button type="button" variant="ghost" className="gap-2 text-red-700" disabled={deleteSessionMutation.isPending} onClick={() => deleteSessionMutation.mutate(session.sessionId)}><Trash2 size={16} />삭제</Button>
+        {editingSessionId === session.sessionId ? <div className="grid gap-2"><input type="datetime-local" className="field" value={sessionDraft.startAt} onChange={(e) => setSessionDraft({ ...sessionDraft, startAt: e.target.value })} /><input type="datetime-local" className="field" value={sessionDraft.endAt} onChange={(e) => setSessionDraft({ ...sessionDraft, endAt: e.target.value })} /><div className="flex gap-2"><Button onClick={() => updateSessionMutation.mutate({ sessionId: session.sessionId, ...sessionDraft })}>저장</Button><Button variant="ghost" onClick={() => setEditingSessionId(null)}>취소</Button></div></div> : <div className="flex gap-2"><Button type="button" variant="ghost" onClick={() => { setEditingSessionId(session.sessionId); setSessionDraft({ startAt: session.startAt.slice(0, 16), endAt: session.endAt.slice(0, 16) }) }}>수정</Button><Button type="button" variant="ghost" className="gap-2 text-red-700" disabled={deleteSessionMutation.isPending} onClick={() => { if (window.confirm('회차를 삭제할까요?')) deleteSessionMutation.mutate(session.sessionId) }}><Trash2 size={16} />삭제</Button></div>}
       </article>)}</div>}
     </section>
   </div>

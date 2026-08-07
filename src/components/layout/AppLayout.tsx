@@ -5,6 +5,7 @@ import { usePortOnePayment } from '@/features/payments/hooks/usePortOnePayment'
 import { apiConfig } from '@/lib/api/config'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import { apiClient } from '@/lib/api/client'
 
 const nav = [{ to: '/', label: '홈' }, { to: '/restaurants', label: '식당 찾기' }, { to: '/recruiting', label: '모집중' }, { to: '/reservations', label: '내 예약' }]
 
@@ -14,7 +15,8 @@ export function AppLayout() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const clearSession = useAuthStore((state) => state.clearSession)
   const { pay: openTestPayment, isProcessing: isTestPaymentProcessing } = usePortOnePayment()
-  const logout = () => {
+  const logout = async () => {
+    try { await apiClient.post('/auth/logout') } catch { /* 로컬 세션은 항상 종료한다. */ }
     clearSession()
     setOpen(false)
   }
@@ -41,6 +43,7 @@ export function AppLayout() {
         <div className="hidden items-center gap-2 md:flex">
           {role === 'owner' && <Link to="/owner" className="px-3 py-2 text-sm font-medium text-brand">식당 관리</Link>}
           {accessToken && <Link to="/mypage" className="px-3 py-2 text-sm font-medium text-ink">내 정보</Link>}
+          {role === 'admin' && <Link to="/admin" className="px-3 py-2 text-sm font-medium text-brand">관리자</Link>}
           {accessToken
             ? <button type="button" onClick={logout} className="flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium"><LogOut size={16} /> 로그아웃</button>
             : <Link to="/login" className="flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium"><UserRound size={16} /> 로그인</Link>}
