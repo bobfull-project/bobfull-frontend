@@ -1,9 +1,10 @@
-import { CalendarDays, Clock3, MapPin, Users } from 'lucide-react'
+import { CalendarDays, MapPin } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SeatIndicator } from '@/components/ui/SeatIndicator'
 import { useRecruitingReservations } from '@/features/reservations/api/queries'
 import { useRestaurants } from '@/features/restaurants/api/queries'
 import type { Category } from '@/types/domain'
@@ -38,7 +39,7 @@ export function RecruitingReservationListPage() {
   return <section className="page-container page-section">
     <PageHeader eyebrow="RECRUITING" title="지금 참여 가능한 예약" description="식당별로 찾지 않아도 현재 예약 가능한 시간대를 한 번에 확인할 수 있어요." />
 
-    <div className="card mb-8 grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-end">
+    <div className="mb-8 grid gap-4 border-y border-line bg-white/40 p-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-end">
       <label className="block"><span className="label">날짜</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="field h-12" /></label>
       <label className="block"><span className="label">시간</span><input type="time" value={time} onChange={(event) => setTime(event.target.value)} className="field h-12" /></label>
       <label className="block"><span className="label">음식 카테고리</span><select value={category} onChange={(event) => setCategory(event.target.value as '전체' | Category)} className="field h-12">{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
@@ -52,20 +53,28 @@ export function RecruitingReservationListPage() {
       ? <p className="py-20 text-center text-muted">불러오는 중입니다.</p>
       : items.length === 0
       ? <EmptyState title="조건에 맞는 예약이 없어요" description="날짜나 시간을 변경해 다른 예약을 찾아보세요." />
-      : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {items.map(({ item, restaurant }) => restaurant && <article key={item.reservationId} className="card overflow-hidden">
-          <div className="flex items-start justify-between bg-brand-soft p-5">
-            <div><p className="text-xs font-semibold text-brand">{restaurant.category}</p><h2 className="mt-1 text-lg font-semibold">{item.restaurantName}</h2><p className="mt-2 flex items-center gap-1 text-xs text-muted"><MapPin size={13} />{restaurant.area}</p></div>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand">모집중</span>
-          </div>
-          <div className="p-5">
-            <div className="space-y-3 text-sm">
-              <p className="flex items-center gap-2 font-semibold"><CalendarDays size={16} className="text-brand" />{new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(item.startAt))}</p>
-              <p className="flex items-center gap-2 text-muted"><Clock3 size={16} />{item.startAt.slice(11, 16)}~{item.endAt.slice(11, 16)}</p>
-              <p className="flex items-center gap-2 text-muted"><Users size={16} /><strong className="text-brand">잔여 좌석 {item.availableCapacity}석</strong> ({item.capacity}인 테이블)</p>
-              <p className="text-xs text-muted">1인당 예약금 {restaurant.depositPerPerson.toLocaleString()}원</p>
+      : <div className="border-t border-line">
+        {items.map(({ item, restaurant }) => restaurant && <article key={item.reservationId} className="grid gap-5 border-b border-line py-7 md:grid-cols-[1.45fr_.75fr_1fr_auto] md:items-center md:gap-8">
+          <div className="flex items-center gap-4">
+            {restaurant.imageUrl
+              ? <img src={restaurant.imageUrl} alt={`${restaurant.name} 이미지`} className="h-20 w-24 shrink-0 rounded-xl object-cover" />
+              : <div className="grid h-20 w-24 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-soft to-accent-soft text-3xl" aria-hidden="true">{restaurant.image}</div>}
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-brand">{restaurant.category}</p>
+              <h2 className="mt-1 truncate text-xl font-semibold">{item.restaurantName}</h2>
+              <p className="mt-2 flex items-center gap-1 text-xs text-muted"><MapPin size={13} />{restaurant.area}</p>
+              <p className="mt-1 text-xs text-muted">예약금 {restaurant.depositPerPerson.toLocaleString()}원</p>
             </div>
-            <Link
+          </div>
+          <div>
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-brand"><CalendarDays size={13} />{new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(item.startAt))}</p>
+            <p className="mt-1 text-3xl font-semibold tracking-[-.04em]">{item.startAt.slice(11, 16)}</p>
+          </div>
+          <div>
+            <SeatIndicator capacity={item.capacity} occupied={item.currentParticipantCount} />
+            <p className="mt-2 text-sm font-semibold text-brand">남은 자리 {item.availableCapacity}석</p>
+          </div>
+          <Link
               to={`/restaurants/${item.restaurantId}/reservations/new`}
               state={{
                 type: 'JOIN',
@@ -75,9 +84,8 @@ export function RecruitingReservationListPage() {
                 depositPerPerson: restaurant.depositPerPerson,
               }}
             >
-              <Button fullWidth className="mt-5">참여하기</Button>
-            </Link>
-          </div>
+              <Button className="w-full md:w-auto">참여하기</Button>
+          </Link>
         </article>)}
       </div>}
   </section>

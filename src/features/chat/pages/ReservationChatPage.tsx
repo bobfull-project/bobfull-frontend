@@ -1,9 +1,9 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Menu, MessageCircle, Send, Smile } from 'lucide-react'
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
+import { ArrowLeft, Flag, Menu, MessageCircle, Send, Smile, X } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { chatApi, type ChatMessage } from '@/features/chat/api/chatApi'
+import { chatApi, type ChatMessage, type ChatReportReason } from '@/features/chat/api/chatApi'
 import { useReservationChat } from '@/features/chat/hooks/useReservationChat'
 import { memberRepository } from '@/features/mypage/api/memberRepository'
 import { reservationRepository } from '@/features/reservations/api/reservationRepository'
@@ -18,6 +18,10 @@ function errorMessage(error: unknown) {
 }
 
 const avatarColors = ['bg-[#f6b26b]', 'bg-[#96c58c]', 'bg-[#c0a78d]', 'bg-[#e9a7a7]', 'bg-[#8eb9c7]']
+const reportReasons: Array<{ value: ChatReportReason; label: string }> = [
+  { value: 'ABUSE', label: '욕설·괴롭힘' }, { value: 'SPAM', label: '스팸' },
+  { value: 'PERSONAL_INFORMATION', label: '개인정보 노출' }, { value: 'OTHER', label: '기타' },
+]
 
 function avatarColor(name: string) {
   const index = [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0) % avatarColors.length
@@ -36,6 +40,9 @@ export function ReservationChatPage() {
   const reservationId = Number(useParams().reservationId)
   const accessToken = useAuthStore((state) => state.accessToken)
   const [content, setContent] = useState('')
+  const [reportTarget, setReportTarget] = useState<ChatMessage | null>(null)
+  const [reportReason, setReportReason] = useState<ChatReportReason>('ABUSE')
+  const [reportDetail, setReportDetail] = useState('')
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
   const profileQuery = useQuery({
@@ -55,6 +62,12 @@ export function ReservationChatPage() {
     retry: false,
   })
   const roomId = roomQuery.data?.chatRoomId ?? null
+  const reportMutation = useMutation({
+    mutationFn: () => chatApi.reportMember(roomId!, reportTarget!.senderMemberId, {
+      reason: reportReason, anchorMessageId: reportTarget!.messageId, detail: reportDetail.trim() || undefined,
+    }),
+    onSuccess: () => { setReportTarget(null); setReportReason('ABUSE'); setReportDetail('') },
+  })
   const historyQuery = useInfiniteQuery({
     queryKey: ['chat-messages', roomId],
     queryFn: ({ pageParam }) => chatApi.getMessages(roomId!, pageParam),
@@ -104,11 +117,12 @@ export function ReservationChatPage() {
         {messages.length === 0 && <div className="grid min-h-96 place-items-center text-center text-sm text-muted"><div className="rounded-3xl border border-white/70 bg-white/80 px-8 py-7 shadow-sm backdrop-blur-sm"><div className="mx-auto mb-4 flex w-fit -rotate-6 gap-1" aria-hidden="true"><span className="h-7 w-3 rounded-full border border-[#d8cfb8] bg-[#fffdf7]" /><span className="mt-2 h-7 w-3 rotate-12 rounded-full border border-[#d8cfb8] bg-[#fffdf7]" /><span className="h-7 w-3 rotate-[24deg] rounded-full border border-[#d8cfb8] bg-[#fffdf7]" /></div><p className="font-medium text-ink">아직 메시지가 없습니다.</p><p className="mt-1">함께 식사할 참여자에게 인사해보세요.</p></div></div>}
         <div className="space-y-4">{messages.map((message) => {
           const mine = message.senderMemberId === profileQuery.data?.memberId
-          return <article key={message.messageId} className={`flex items-start gap-2.5 ${mine ? 'justify-end' : 'justify-start'}`}>{!mine && <div className={`mt-5 grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-white text-lg shadow-sm ${avatarColor(message.senderName)}`} aria-hidden="true">🍚</div>}<div className={`max-w-[76%] ${mine ? 'text-right' : ''}`}>{!mine && <p className="mb-1.5 ml-1 text-xs font-semibold text-[#8d806d]">{message.senderName}</p>}<div className={`chat-bubble ${mine ? 'chat-bubble-mine' : 'chat-bubble-other'}`}><p className="whitespace-pre-wrap break-words leading-6">{message.content}</p></div><p className={`mt-1 text-[11px] text-[#a79b88] ${mine ? 'mr-1' : 'ml-1'}`}>{new Date(message.sentAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</p></div></article>
+          return <article key={message.messageId} className={`group flex items-start gap-2.5 ${mine ? 'justify-end' : 'justify-start'}`}>{!mine && <div className={`mt-5 grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-white text-lg shadow-sm ${avatarColor(message.senderName)}`} aria-hidden="true">🍚</div>}<div className={`max-w-[76%] ${mine ? 'text-right' : ''}`}>{!mine && <p className="mb-1.5 ml-1 text-xs font-semibold text-[#8d806d]">{message.senderName}</p>}<div className={`chat-bubble ${mine ? 'chat-bubble-mine' : 'chat-bubble-other'}`}><p className="whitespace-pre-wrap break-words leading-6">{message.content}</p></div><div className={`mt-1 flex items-center gap-2 text-[11px] text-[#a79b88] ${mine ? 'justify-end' : 'ml-1'}`}><span>{new Date(message.sentAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>{!mine && <button type="button" className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 opacity-60 hover:bg-white hover:text-red-700 group-hover:opacity-100" onClick={() => { setReportTarget(message); reportMutation.reset() }}><Flag size={11} />신고</button>}</div></div></article>
         })}</div><div ref={bottomRef} /></div>
       </div>
 
       <form className="border-t border-[#eee4d3] bg-[#fffaf2] p-3 md:p-4" onSubmit={submit}>{!canSend && <p className="mb-3 text-sm text-muted">종료되거나 취소된 예약은 기존 메시지만 확인할 수 있습니다.</p>}{realtime.connectionError && <p className="mb-3 text-sm text-red-700">{realtime.connectionError}</p>}<div className="flex items-center gap-2.5"><div className="flex h-14 min-w-0 flex-1 items-center rounded-full border border-[#e6dac5] bg-white px-5 shadow-sm focus-within:border-[#d8c8ad] focus-within:shadow-[0_0_0_3px_rgba(216,200,173,0.18)]"><input className="min-w-0 flex-1 bg-transparent text-[15px] outline-none focus-visible:ring-0 focus-visible:ring-offset-0" maxLength={500} placeholder={canSend ? '메시지를 입력하세요' : '메시지를 보낼 수 없습니다.'} value={content} onChange={(event) => setContent(event.target.value)} disabled={!canSend || realtime.connectionState !== 'connected'} /><Smile className="ml-2 shrink-0 text-[#b8aa95]" size={22} /></div><button type="submit" className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-brand text-white shadow-[0_7px_18px_rgba(238,132,67,0.32)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40" disabled={!canSend || !content.trim() || realtime.connectionState !== 'connected'} aria-label="전송"><Send size={22} /></button></div></form>
     </div>
+    {reportTarget && <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-5" role="dialog" aria-modal="true" aria-label="채팅 참여자 신고"><div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between"><div><h2 className="text-xl font-semibold">{reportTarget.senderName}님 신고</h2><p className="mt-2 text-sm text-muted">신고 메시지를 기준으로 관리자가 주변 대화를 함께 확인합니다.</p></div><button type="button" className="rounded-full p-2 hover:bg-surface" onClick={() => setReportTarget(null)} aria-label="닫기"><X size={20} /></button></div><blockquote className="mt-5 max-h-32 overflow-y-auto rounded-2xl bg-surface p-4 text-sm leading-6">{reportTarget.content}</blockquote><label className="mt-5 block"><span className="label">신고 사유</span><select className="field" value={reportReason} onChange={(event) => setReportReason(event.target.value as ChatReportReason)}>{reportReasons.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}</select></label><label className="mt-4 block"><span className="label">상세 설명 (선택)</span><textarea className="field min-h-28 resize-none" maxLength={500} value={reportDetail} onChange={(event) => setReportDetail(event.target.value)} placeholder="관리자가 확인할 내용을 입력해주세요." /><span className="mt-1 block text-right text-xs text-muted">{reportDetail.length}/500</span></label>{reportMutation.isError && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{errorMessage(reportMutation.error)}</p>}<div className="mt-6 flex justify-end gap-3"><Button variant="ghost" onClick={() => setReportTarget(null)} disabled={reportMutation.isPending}>취소</Button><Button onClick={() => reportMutation.mutate()} disabled={reportMutation.isPending}>{reportMutation.isPending ? '신고 중...' : '신고하기'}</Button></div></div></div>}
   </section>
 }

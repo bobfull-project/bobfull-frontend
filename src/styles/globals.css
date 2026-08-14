@@ -2,9 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Griun OMIRI';
+  src: url('/fonts/Griun_OMIRI-Rg.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/PretendardVariable.ttf') format('truetype');
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   * { @apply border-line; }
-  html { font-family: Inter, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  html { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
   body { @apply m-0 bg-canvas text-ink antialiased; }
   button, input, select, textarea { font: inherit; }
   button, a { -webkit-tap-highlight-color: transparent; }
@@ -15,6 +31,28 @@
 @layer components {
   .page-container { @apply mx-auto w-full max-w-7xl px-5 md:px-8; }
   .page-section { @apply py-10 md:py-16; }
+  .font-display { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  .font-hero { font-family: 'Griun OMIRI', "Iropke Batang", "KoPub Batang", "Noto Serif KR", "AppleMyungjo", serif; }
+  .editorial-rule { @apply border-t border-line; }
+  .owner-shell .card {
+    border-color: #e8dfd2;
+    border-radius: 16px;
+    background: rgba(255, 253, 248, .88);
+    box-shadow: 0 4px 18px rgba(61, 52, 47, .035);
+  }
+  .owner-shell .field {
+    border-color: #e5dbcd;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .9);
+  }
+  .owner-shell .field:focus { border-color: #8da184; }
+  .owner-shell .text-brand { color: #627d55; }
+  .owner-shell .text-brand-active { color: #506a46; }
+  .owner-shell .bg-brand { background-color: #627d55; }
+  .owner-shell button.bg-brand:hover { background-color: #506a46; }
+  .owner-shell .bg-brand-soft { background-color: #f1f5ed; }
+  .owner-shell .border-brand { border-color: #627d55; }
+
   .card { @apply rounded-card border border-line bg-white shadow-card; }
   .field { @apply h-14 w-full rounded-2xl border border-line bg-white px-4 text-[15px] outline-none transition focus:border-sub focus:ring-1 focus:ring-sub; }
   .label { @apply mb-2 block text-sm font-medium text-ink; }
