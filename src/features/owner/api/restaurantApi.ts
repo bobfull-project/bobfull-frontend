@@ -15,6 +15,26 @@ export interface OwnerRestaurantDetail extends OwnerRestaurantSummary {
   keyword: string
 }
 
+export type FeedbackCategory = 'FOOD' | 'SERVICE' | 'PRICE' | 'CLEANLINESS' | 'ETC'
+export type FeedbackSentiment = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL'
+
+export interface RestaurantFeedbackInsight {
+  category: FeedbackCategory
+  aspectType: string
+  normalizedAspect: string
+  opinionType: string
+  sentiment: FeedbackSentiment
+  count: number
+  summary: string
+}
+
+export interface RestaurantFeedbackInsightList {
+  restaurantId: number
+  from: string
+  to: string
+  insights: RestaurantFeedbackInsight[]
+}
+
 export interface RestaurantInput {
   name: string
   address: string
@@ -54,6 +74,13 @@ export async function getMyRestaurants(): Promise<OwnerRestaurantSummary[]> {
 
 export async function getMyRestaurant(restaurantId: number): Promise<OwnerRestaurantDetail> {
   const response = await apiClient.get<{ data: OwnerRestaurantDetail }>(`/owner/restaurants/${restaurantId}`)
+  return response.data.data
+}
+
+export async function getRestaurantFeedbackInsights(restaurantId: number): Promise<RestaurantFeedbackInsightList> {
+  const response = await apiClient.get<{ data: RestaurantFeedbackInsightList }>(
+    `/owner/restaurants/${restaurantId}/feedback-insights`,
+  )
   return response.data.data
 }
 
