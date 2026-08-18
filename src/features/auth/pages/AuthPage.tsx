@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, Utensils } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { apiClient } from '@/lib/api/client'
 import { useAuthStore } from '@/stores/authStore'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 interface LoginResponse { accessToken: string; tokenType: string; refreshToken: string }
 interface SignupResponse { memberId: number; email: string; name: string; role: 'MEMBER' | 'OWNER' | 'ADMIN' }
@@ -75,13 +76,13 @@ export function AuthPage({ mode, audience }: { mode: 'login' | 'signup'; audienc
 
   return <main className="grid min-h-screen bg-canvas lg:grid-cols-2">
     <section className="hidden bg-brand p-14 text-white lg:flex lg:flex-col lg:justify-between">
-      <Link to="/" className="flex items-center gap-2 text-xl font-bold"><Utensils className="text-accent" />밥풀</Link>
+      <Link to="/" aria-label="밥풀 홈"><BrandLogo className="[&_span]:text-white" imageClassName="size-11" /></Link>
       <div><p className="text-sm text-white/55">BOBFULL</p><h1 className="mt-4 text-5xl font-semibold leading-tight">좋은 식사는<br />좋은 만남이 됩니다.</h1><p className="mt-5 max-w-md leading-7 text-white/60">식당과 사람을 자연스럽게 연결하는 가장 간단한 방법.</p></div>
       <p className="text-sm text-white/40">MVP API test client</p>
     </section>
     <section className="flex items-center justify-center p-5">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-10 inline-flex items-center gap-2 text-sm text-muted"><ArrowLeft size={16} />홈으로</Link>
+        <div className="mb-10 flex items-center justify-between gap-4"><Link to="/" aria-label="밥풀 홈"><BrandLogo imageClassName="size-8" /></Link><Link to="/" className="inline-flex items-center gap-2 text-sm text-muted"><ArrowLeft size={16} />홈으로</Link></div>
         <p className="text-sm font-semibold text-brand">{audience === 'owner' ? '사장님 전용' : '밥풀 시작하기'}</p>
         <h2 className="mt-2 text-3xl font-semibold">{isSignup ? '회원가입' : '로그인'}</h2>
         <p className="mt-3 text-sm text-muted">{isSignup ? '기본 정보만 입력하면 바로 시작할 수 있어요.' : '계정에 로그인하고 예약을 확인하세요.'}</p>

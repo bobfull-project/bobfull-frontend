@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { deleteRestaurant, getMyRestaurant, updateRestaurant } from '@/features/owner/api/restaurantApi'
 import { deleteSession, getOwnerSessions, registerSessionsBulk, updateSession } from '@/features/owner/api/sessionApi'
 import { deleteTable, getTables, registerTablesBulk, updateTable } from '@/features/owner/api/tableApi'
+import { RestaurantFeedbackInsights } from '@/features/owner/components/RestaurantFeedbackInsights'
 
 const TABLE_CAPACITIES = [2, 4, 6, 8] as const
 
@@ -195,7 +196,19 @@ export function OwnerRestaurantManagePage() {
         </div>
       </div>
     </section>
-    {editingRestaurant && <section className="card mt-6 p-6"><h2 className="text-xl font-semibold">식당 정보 수정</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><label><span className="label">식당명</span><input className="field" value={restaurantDraft.name} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, name: e.target.value })} /></label><label><span className="label">키워드</span><input className="field" value={restaurantDraft.keyword} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, keyword: e.target.value })} /></label><label><span className="label">1인당 예약금</span><input type="number" className="field" value={restaurantDraft.depositPerPerson} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, depositPerPerson: Number(e.target.value) })} /></label><label className="md:col-span-2"><span className="label">소개</span><textarea className="field h-28" value={restaurantDraft.description} onChange={(e) => setRestaurantDraft({ ...restaurantDraft, description: e.target.value })} /></label></div><div className="mt-5 flex justify-end gap-2"><Button variant="ghost" onClick={() => setEditingRestaurant(false)}>취소</Button><Button onClick={() => updateRestaurantMutation.mutate()} disabled={updateRestaurantMutation.isPending}>저장</Button></div></section>}
+    <RestaurantFeedbackInsights restaurantId={restaurantId} />
+    {editingRestaurant && (
+      <section className="card mt-6 p-6">
+        <h2 className="text-xl font-semibold">식당 정보 수정</h2>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <label><span className="label">식당명</span><input className="field" value={restaurantDraft.name} onChange={(event) => setRestaurantDraft({ ...restaurantDraft, name: event.target.value })} /></label>
+          <label><span className="label">키워드</span><input className="field" value={restaurantDraft.keyword} onChange={(event) => setRestaurantDraft({ ...restaurantDraft, keyword: event.target.value })} /></label>
+          <label><span className="label">1인당 예약금</span><input type="number" className="field" value={restaurantDraft.depositPerPerson} onChange={(event) => setRestaurantDraft({ ...restaurantDraft, depositPerPerson: Number(event.target.value) })} /></label>
+          <label className="md:col-span-2"><span className="label">소개</span><textarea className="field h-28" value={restaurantDraft.description} onChange={(event) => setRestaurantDraft({ ...restaurantDraft, description: event.target.value })} /></label>
+        </div>
+        <div className="mt-5 flex justify-end gap-2"><Button variant="ghost" onClick={() => setEditingRestaurant(false)}>취소</Button><Button onClick={() => updateRestaurantMutation.mutate()} disabled={updateRestaurantMutation.isPending}>저장</Button></div>
+      </section>
+    )}
 
     <section className="card mt-6 p-6 md:p-8">
       <p className="text-sm font-semibold text-brand">DINING TABLES</p>

@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { reservationRepository } from '@/features/reservations/api/reservationRepository'
-import { reservationStatusLabel } from '@/features/reservations/labels'
+import { reservationStatusClass, reservationStatusLabel } from '@/features/reservations/labels'
 import { formatDateTime } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -30,6 +30,6 @@ export function MyReservationsPage() {
     </div>}
     {reservationsQuery.isSuccess && (data.length === 0
       ? <EmptyState title="아직 예약이 없어요" description="마음에 드는 식당의 예약에 참여해 보세요." />
-      : <div className="grid gap-4">{data.map((item) => <Link key={item.reservationId} to={`/reservations/${item.reservationId}`} className="card flex flex-col gap-5 p-6 transition hover:-translate-y-0.5 hover:shadow-card md:flex-row md:items-center md:justify-between"><div><span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-active">{reservationStatusLabel[item.reservationStatus]}</span><h2 className="mt-3 text-lg font-semibold">{item.restaurantName}</h2><p className="mt-2 text-sm text-muted">모집 상태 {item.recruitmentStatus === 'OPEN' ? '모집 중' : '마감'}</p></div><div className="flex items-center gap-6"><div className="min-w-48 space-y-2 text-sm text-muted"><p className="flex items-center gap-2"><CalendarDays size={16} />{formatDateTime(item.startAt)}</p><p className="flex items-center gap-2"><Users size={16} />내 인원 {item.partySize}명</p></div><ChevronRight className="shrink-0 text-muted" size={20} /></div></Link>)}</div>)}
+      : <div className="grid gap-4">{data.map((item) => <Link key={item.reservationId} to={`/reservations/${item.reservationId}`} className="card flex flex-col gap-5 p-6 transition hover:-translate-y-0.5 hover:shadow-card md:flex-row md:items-center md:justify-between"><div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${reservationStatusClass[item.reservationStatus]}`}>{reservationStatusLabel[item.reservationStatus]}</span><h2 className="mt-3 text-lg font-semibold">{item.restaurantName}</h2><p className="mt-2 text-sm text-muted">모집 상태 {item.recruitmentStatus === 'OPEN' ? '모집 중' : '마감'}</p></div><div className="flex items-center gap-6"><div className="min-w-48 space-y-2 text-sm text-muted"><p className="flex items-center gap-2"><CalendarDays size={16} />{formatDateTime(item.startAt)}</p><p className="flex items-center gap-2"><Users size={16} />내 인원 {item.partySize}명</p></div><ChevronRight className="shrink-0 text-muted" size={20} /></div></Link>)}</div>)}
   </section>
 }

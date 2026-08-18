@@ -1,0 +1,144 @@
+.hero-organic-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 50px;
+}
+
+.organic-button {
+  position: relative;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family:
+    "Pretendard",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
+}
+
+.organic-button__shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.organic-button__content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.organic-button svg { flex-shrink: 0; }
+
+.organic-button--primary {
+  width: 188px;
+  color: #fffdf7;
+}
+
+.organic-button--primary .organic-button__shape path { fill: #69865d; }
+
+.organic-button--primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+
+.organic-button--primary:active { transform: translateY(0); }
+
+.organic-button--secondary {
+  width: 170px;
+  color: #493f35;
+}
+
+.organic-button--secondary .organic-button__shape path {
+  fill: rgba(255, 252, 246, 0.68);
+  stroke: #c9ad82;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.organic-button__content--secondary { gap: 11px; }
+.organic-button__content--secondary > span { margin-right: 4px; }
+
+.organic-button--secondary:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.99);
+}
+
+.organic-button--secondary:active { transform: translateY(0); }
+
+.organic-accent {
+  position: absolute;
+  z-index: 3;
+  left: -2px;
+  top: -13px;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.organic-accent i {
+  position: absolute;
+  display: block;
+  width: 3px;
+  height: 9px;
+  border-radius: 99px;
+  background: #69865d;
+}
+
+.organic-accent i:nth-child(1) {
+  left: 3px;
+  top: 9px;
+  transform: rotate(-70deg);
+}
+
+.organic-accent i:nth-child(2) {
+  left: 10px;
+  top: 3px;
+  transform: rotate(-30deg);
+}
+
+.organic-accent i:nth-child(3) {
+  left: 17px;
+  top: 5px;
+  transform: rotate(13deg);
+}
+
+.organic-button:focus-visible { outline: none; }
+
+.organic-button:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px solid rgba(105, 134, 93, 0.35);
+  border-radius: 22px;
+  z-index: 4;
+}
+
+@media (max-width: 640px) {
+  .hero-organic-actions { gap: 10px; }
+  .organic-button {
+    height: 50px;
+    font-size: 14px;
+  }
+  .organic-button--primary { width: 158px; }
+  .organic-button--secondary { width: 145px; }
+  .organic-button__content { gap: 10px; }
+}

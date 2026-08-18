@@ -24,6 +24,14 @@ export interface ChatMessagePage {
   nextCursor: number | null
 }
 
+export type ChatReportReason = 'ABUSE' | 'SPAM' | 'PERSONAL_INFORMATION' | 'OTHER'
+
+export interface CreateChatReportInput {
+  reason: ChatReportReason
+  anchorMessageId: number
+  detail?: string
+}
+
 export const chatApi = {
   async getRoom(reservationId: number): Promise<ChatRoom> {
     const response = await apiClient.get<ApiResponse<ChatRoom>>(`/reservations/${reservationId}/chat-room`)
@@ -34,6 +42,13 @@ export const chatApi = {
     const response = await apiClient.get<ApiResponse<ChatMessagePage>>(`/chat/rooms/${chatRoomId}/messages`, {
       params: { cursor, size: 30 },
     })
+    return response.data.data
+  },
+
+  async reportMember(chatRoomId: number, reportedMemberId: number, input: CreateChatReportInput) {
+    const response = await apiClient.post<ApiResponse<{ reportId: number }>>(
+      `/chat-rooms/${chatRoomId}/members/${reportedMemberId}/reports`, input,
+    )
     return response.data.data
   },
 }

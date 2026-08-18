@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { reservationRepository } from '@/features/reservations/api/reservationRepository'
-import { reservationStatusLabel } from '@/features/reservations/labels'
+import { reservationStatusClass, reservationStatusLabel } from '@/features/reservations/labels'
 import { formatDateTime } from '@/lib/utils'
 import type { PaymentStatus } from '@/features/mypage/api/paymentHistoryApi'
 import type { ParticipationStatus } from '@/types/domain'
@@ -71,8 +71,8 @@ export function ReservationDetailPage() {
 
     <div className="card p-6 md:p-8">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-active">{reservationStatusLabel[reservation.reservationStatus]}</span>
-        <span className="rounded-full bg-sub-soft px-3 py-1 text-xs font-semibold text-brand">모집 {reservation.recruitmentStatus === 'OPEN' ? '중' : '마감'}</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${reservationStatusClass[reservation.reservationStatus]}`}>{reservationStatusLabel[reservation.reservationStatus]}</span>
+        {reservation.reservationStatus !== 'CLOSED' && reservation.reservationStatus !== 'CANCELLED' && <span className="rounded-full bg-sub-soft px-3 py-1 text-xs font-semibold text-brand">모집 {reservation.recruitmentStatus === 'OPEN' ? '중' : '마감'}</span>}
       </div>
 
       <div className="mt-6 grid gap-5 sm:grid-cols-2">

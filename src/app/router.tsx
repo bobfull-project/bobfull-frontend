@@ -18,6 +18,10 @@ const OwnerRestaurantFormPage = lazy(() => import('@/features/owner/pages/OwnerR
 const OwnerRestaurantListPage = lazy(() => import('@/features/owner/pages/OwnerRestaurantListPage').then((module) => ({ default: module.OwnerRestaurantListPage })))
 const OwnerRestaurantManagePage = lazy(() => import('@/features/owner/pages/OwnerRestaurantManagePage').then((module) => ({ default: module.OwnerRestaurantManagePage })))
 const AdminDashboardPage = lazy(() => import('@/features/admin/pages/AdminDashboardPage').then((module) => ({ default: module.AdminDashboardPage })))
+const AdminModerationPage = lazy(() => import('@/features/admin/pages/AdminModerationPage').then((module) => ({ default: module.AdminModerationPage })))
+const AdminModerationDetailPage = lazy(() => import('@/features/admin/pages/AdminModerationDetailPage').then((module) => ({ default: module.AdminModerationDetailPage })))
+const AdminModerationReportsPage = lazy(() => import('@/features/admin/pages/AdminModerationReportsPage').then((module) => ({ default: module.AdminModerationReportsPage })))
+const AdminModerationReportDetailPage = lazy(() => import('@/features/admin/pages/AdminModerationReportDetailPage').then((module) => ({ default: module.AdminModerationReportDetailPage })))
 const OwnerOperationsPage = lazy(() => import('@/features/owner/pages/OwnerOperationsPage').then((module) => ({ default: module.OwnerOperationsPage })))
 const ReservationChatPage = lazy(() => import('@/features/chat/pages/ReservationChatPage').then((module) => ({ default: module.ReservationChatPage })))
 
@@ -56,6 +60,12 @@ export const router = createBrowserRouter([
       { path: 'restaurants/:restaurantId/operations', element: loadPage(<OwnerOperationsPage />) },
     ],
   },
-  { path: '/admin', element: <AppLayout />, children: [{ index: true, element: loadPage(<AdminDashboardPage />) }] },
+  { path: '/admin', element: <AppLayout />, children: [
+    { index: true, element: loadPage(<AdminDashboardPage />) },
+    { path: 'moderation', element: loadPage(<AdminModerationPage />) },
+    { path: 'moderation/members/:memberId', element: loadPage(<AdminModerationDetailPage />) },
+    { path: 'moderation/reports', element: loadPage(<AdminModerationReportsPage />) },
+    { path: 'moderation/reports/:reportId', element: loadPage(<AdminModerationReportDetailPage />) },
+  ] },
   { path: '*', element: <NotFoundPage /> },
 ])

@@ -3,6 +3,7 @@ import { CalendarDays, Clock3, MapPin, Star, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { SeatIndicator } from '@/components/ui/SeatIndicator'
 import { useRestaurant } from '@/features/restaurants/api/queries'
 import { getAvailableSessions } from '@/features/restaurants/api/sessionApi'
 import { formatDateTime } from '@/lib/utils'
@@ -28,7 +29,7 @@ export function RestaurantDetailPage() {
     <aside className="lg:sticky lg:top-28 lg:self-start">
       <div className="card p-6 shadow-card">
         <p className="text-sm font-semibold text-brand">예약 가능 시간</p>
-        <h2 className="mt-2 text-xl font-semibold">원하는 시간대를 선택하세요</h2>
+        <h2 className="font-display mt-2 text-2xl font-semibold">원하는 시간대를 선택하세요</h2>
         <p className="mt-3 text-sm leading-6 text-muted">합석 테이블과 시작·종료 시간은 사장님이 미리 설정합니다.</p>
         <label className="mt-4 block"><span className="label">날짜</span><input type="date" min={today} className="field h-11" value={date} onChange={(event) => setDate(event.target.value)} /></label>
       </div>
@@ -37,12 +38,13 @@ export function RestaurantDetailPage() {
         {!sessionsQuery.isLoading && availableSlots.length === 0 && <p className="card p-5 text-sm text-muted">선택한 날짜에 예약 가능한 시간이 없습니다.</p>}
         {availableSlots.map((slot) => {
           const soldOut = slot.availableCapacity <= 0
-          return <div key={slot.sessionId} className="card p-5">
+          return <div key={slot.sessionId} className="border-b border-line bg-white/45 p-5 first:border-t">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="flex items-center gap-2 text-sm font-semibold"><CalendarDays size={16} className="text-brand" />{formatDateTime(slot.startAt)}</p>
-                <p className="mt-3 flex items-center gap-2 text-sm text-muted"><Clock3 size={15} />{slot.startAt.slice(11, 16)}~{slot.endAt.slice(11, 16)}</p>
-                <p className="mt-2 flex items-center gap-2 text-sm text-muted"><Users size={15} /><strong className={soldOut ? 'text-muted' : 'text-brand'}>{soldOut ? '잔여 좌석 없음' : `잔여 좌석 ${slot.availableCapacity}석`}</strong><span>({slot.currentParticipantCount}/{slot.capacity}인)</span></p>
+                <p className="flex items-center gap-2 text-xs font-semibold text-muted"><CalendarDays size={14} className="text-brand" />{formatDateTime(slot.startAt)}</p>
+                <p className="font-display mt-2 flex items-center gap-2 text-3xl font-semibold"><Clock3 size={16} className="text-muted" />{slot.startAt.slice(11, 16)}<span className="font-sans text-xs font-normal text-muted">~ {slot.endAt.slice(11, 16)}</span></p>
+                <SeatIndicator className="mt-4" capacity={slot.capacity} occupied={slot.currentParticipantCount} />
+                <p className={`mt-2 flex items-center gap-2 text-sm font-semibold ${soldOut ? 'text-muted' : 'text-brand'}`}><Users size={15} />{soldOut ? '잔여 좌석 없음' : `남은 자리 ${slot.availableCapacity}석`}</p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${soldOut ? 'bg-surface text-muted' : 'bg-accent-soft text-accent-active'}`}>{soldOut ? '마감' : '예약 가능'}</span>
             </div>
