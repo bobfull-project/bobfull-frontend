@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { ReservationProgressText } from '@/components/ui/ReservationProgressText'
 import { SeatIndicator } from '@/components/ui/SeatIndicator'
 import { useRecruitingReservations } from '@/features/reservations/api/queries'
 import { useRestaurants } from '@/features/restaurants/api/queries'
@@ -72,7 +73,13 @@ export function RecruitingReservationListPage() {
           </div>
           <div>
             <SeatIndicator capacity={item.capacity} occupied={item.currentParticipantCount} />
-            <p className="mt-2 text-sm font-semibold text-brand">남은 자리 {item.availableCapacity}석</p>
+            <ReservationProgressText
+              className="mt-2"
+              confirmed={item.reservationStatus === 'CONFIRMED'}
+              currentParticipantCount={item.currentParticipantCount}
+              confirmationThreshold={item.confirmationThreshold}
+              availableCapacity={item.availableCapacity}
+            />
           </div>
           <Link
               to={`/restaurants/${item.restaurantId}/reservations/new`}

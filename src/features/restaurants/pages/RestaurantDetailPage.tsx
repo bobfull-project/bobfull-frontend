@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, Clock3, MapPin, Star, Users } from 'lucide-react'
+import { CalendarDays, Clock3, MapPin, Star } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { ReservationProgressText } from '@/components/ui/ReservationProgressText'
 import { SeatIndicator } from '@/components/ui/SeatIndicator'
 import { useRestaurant } from '@/features/restaurants/api/queries'
 import { getAvailableSessions } from '@/features/restaurants/api/sessionApi'
@@ -25,7 +26,7 @@ export function RestaurantDetailPage() {
   if (error || !restaurant) return <div className="page-container page-section">식당을 찾을 수 없습니다.</div>
 
   return <section className="page-container page-section"><div className="grid gap-8 lg:grid-cols-[1.45fr_.75fr]">
-    <div><div className="grid min-h-80 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand-soft to-accent-soft text-9xl md:min-h-[460px]">{restaurant.imageUrl ? <img src={restaurant.imageUrl} alt={`${restaurant.name} 이미지`} className="h-full min-h-80 w-full object-cover md:min-h-[460px]" /> : <span className="m-auto">{restaurant.image}</span>}</div><div className="py-8"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold text-brand">{restaurant.category}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">{restaurant.name}</h1></div><span className="flex items-center gap-1 text-sm font-semibold"><Star size={16} fill="currentColor" /> {restaurant.rating}</span></div><p className="mt-4 flex items-center gap-2 text-sm text-muted"><MapPin size={16} />{restaurant.area} · {restaurant.priceRange}</p><p className="mt-3 text-sm font-semibold">1인당 예약금 {restaurant.depositPerPerson.toLocaleString()}원</p><p className="mt-7 max-w-2xl leading-7 text-muted">{restaurant.description}</p><div className="mt-6 flex gap-2">{restaurant.tags.map((tag) => <span key={tag} className="rounded-full bg-sub-soft px-3 py-2 text-xs text-brand">{tag}</span>)}</div></div></div>
+    <div><div className="grid min-h-80 overflow-hidden rounded-[28px] bg-gradient-to-br from-brand-soft to-accent-soft text-9xl md:min-h-[460px]">{restaurant.imageUrl ? <img src={restaurant.imageUrl} alt={`${restaurant.name} 이미지`} className="h-full min-h-80 w-full object-cover md:min-h-[460px]" /> : <span className="m-auto">{restaurant.image}</span>}</div><div className="py-8"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold text-brand">{restaurant.category}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">{restaurant.name}</h1></div><span className="flex items-center gap-1 text-sm font-semibold"><Star size={16} fill="currentColor" /> {restaurant.rating}</span></div><p className="mt-4 flex items-center gap-2 text-sm text-muted"><MapPin size={16} />{restaurant.area} · {restaurant.priceRange}</p><p className="mt-3 text-sm font-semibold">1인당 예약금 {restaurant.depositPerPerson.toLocaleString()}원</p><p className="mt-7 max-w-2xl leading-7 text-muted">{restaurant.description}</p><div className="mt-6 flex flex-wrap gap-2">{restaurant.tags.map((tag) => <span key={tag} className="border-b border-brand/30 pb-0.5 text-xs text-brand">#{tag}</span>)}</div></div></div>
     <aside className="lg:sticky lg:top-28 lg:self-start">
       <div className="card p-6 shadow-card">
         <p className="text-sm font-semibold text-brand">예약 가능 시간</p>
@@ -38,13 +39,23 @@ export function RestaurantDetailPage() {
         {!sessionsQuery.isLoading && availableSlots.length === 0 && <p className="card p-5 text-sm text-muted">선택한 날짜에 예약 가능한 시간이 없습니다.</p>}
         {availableSlots.map((slot) => {
           const soldOut = slot.availableCapacity <= 0
+          const confirmationThreshold = slot.capacity === 2 ? 2 : slot.capacity - 1
+          const confirmed = slot.currentParticipantCount >= confirmationThreshold
           return <div key={slot.sessionId} className="border-b border-line bg-white/45 p-5 first:border-t">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="flex items-center gap-2 text-xs font-semibold text-muted"><CalendarDays size={14} className="text-brand" />{formatDateTime(slot.startAt)}</p>
                 <p className="font-display mt-2 flex items-center gap-2 text-3xl font-semibold"><Clock3 size={16} className="text-muted" />{slot.startAt.slice(11, 16)}<span className="font-sans text-xs font-normal text-muted">~ {slot.endAt.slice(11, 16)}</span></p>
                 <SeatIndicator className="mt-4" capacity={slot.capacity} occupied={slot.currentParticipantCount} />
-                <p className={`mt-2 flex items-center gap-2 text-sm font-semibold ${soldOut ? 'text-muted' : 'text-brand'}`}><Users size={15} />{soldOut ? '잔여 좌석 없음' : `남은 자리 ${slot.availableCapacity}석`}</p>
+                {soldOut
+                  ? <p className="mt-2 text-sm font-medium text-muted">잔여 좌석 없음</p>
+                  : <ReservationProgressText
+                      className="mt-2"
+                      confirmed={confirmed}
+                      currentParticipantCount={slot.currentParticipantCount}
+                      confirmationThreshold={confirmationThreshold}
+                      availableCapacity={slot.availableCapacity}
+                    />}
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${soldOut ? 'bg-surface text-muted' : 'bg-accent-soft text-accent-active'}`}>{soldOut ? '마감' : '예약 가능'}</span>
             </div>
