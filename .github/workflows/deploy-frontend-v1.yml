@@ -176,8 +176,8 @@ jobs:
                 ;;
             esac
 
-            echo "${content_type}" | grep -Eiq 'content-type:[[:space:]]*text/html' && {
+            if echo "${content_type}" | grep -Eiq 'content-type:[[:space:]]*text/html'; then
               echo "Asset ${asset_path} returned HTML instead of a static asset" >&2
               exit 1
-            }
+            fi
           done
