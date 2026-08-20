@@ -30,6 +30,7 @@ env:
   FRONTEND_S3_BUCKET: ${{ vars.FRONTEND_S3_BUCKET }}
   FRONTEND_PUBLIC_BASE_URL: ${{ vars.FRONTEND_PUBLIC_BASE_URL }}
   FRONTEND_PARAMETER_PREFIX: ${{ vars.FRONTEND_PARAMETER_PREFIX || '/bobfull/prod' }}
+  FRONTEND_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.FRONTEND_CLOUDFRONT_DISTRIBUTION_ID }}
 
 jobs:
   deploy:
@@ -51,6 +52,7 @@ jobs:
             FRONTEND_S3_BUCKET
             FRONTEND_PUBLIC_BASE_URL
             FRONTEND_PARAMETER_PREFIX
+            FRONTEND_CLOUDFRONT_DISTRIBUTION_ID
             AWS_ROLE_TO_ASSUME
           )
 
@@ -115,10 +117,67 @@ jobs:
           set -euo pipefail
           aws s3 sync dist "s3://${FRONTEND_S3_BUCKET}" --delete
 
-      - name: Verify frontend page
+      - name: Invalidate CloudFront entry documents
         run: |
           set -euo pipefail
+
+          invalidation_id="$(aws cloudfront create-invalidation \
+            --distribution-id "${FRONTEND_CLOUDFRONT_DISTRIBUTION_ID}" \
+            --paths "/" "/index.html" \
+            --query 'Invalidation.Id' \
+            --output text)"
+
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${FRONTEND_CLOUDFRONT_DISTRIBUTION_ID}" \
+            --id "${invalidation_id}"
+
+      - name: Verify frontend assets
+        run: |
+          set -euo pipefail
+
+          base_url="${FRONTEND_PUBLIC_BASE_URL%/}"
+          index_file="/tmp/bobfull-frontend-index.html"
+
           curl --fail --silent --show-error --location \
-            "${FRONTEND_PUBLIC_BASE_URL%/}/" \
-            >/tmp/bobfull-frontend-index.html
-          test -s /tmp/bobfull-frontend-index.html
+            "${base_url}/" \
+            >"${index_file}"
+          test -s "${index_file}"
+
+          mapfile -t assets < <(grep -Eo '/assets/[^"'\''<> ]+\.(js|css)' "${index_file}" | sort -u)
+
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No JS/CSS assets found in deployed index.html" >&2
+            exit 1
+          fi
+
+          for asset_path in "${assets[@]}"; do
+            headers_file="$(mktemp)"
+            body_file="$(mktemp)"
+
+            curl --fail --silent --show-error --location \
+              --dump-header "${headers_file}" \
+              --output "${body_file}" \
+              "${base_url}${asset_path}"
+
+            content_type="$(awk 'BEGIN { IGNORECASE=1 } /^content-type:/ { value=$0 } END { print value }' "${headers_file}")"
+
+            case "${asset_path}" in
+              *.js)
+                echo "${content_type}" | grep -Eiq 'content-type:[[:space:]]*(text|application)/(javascript|ecmascript|x-javascript)' || {
+                  echo "Unexpected JavaScript content type for ${asset_path}: ${content_type}" >&2
+                  exit 1
+                }
+                ;;
+              *.css)
+                echo "${content_type}" | grep -Eiq 'content-type:[[:space:]]*text/css' || {
+                  echo "Unexpected CSS content type for ${asset_path}: ${content_type}" >&2
+                  exit 1
+                }
+                ;;
+            esac
+
+            echo "${content_type}" | grep -Eiq 'content-type:[[:space:]]*text/html' && {
+              echo "Asset ${asset_path} returned HTML instead of a static asset" >&2
+              exit 1
+            }
+          done
